@@ -1,0 +1,246 @@
+:root {
+  --bg: #0a1a22;
+  --surface: rgba(200, 240, 255, 0.05);
+  --surface-hover: rgba(200, 240, 255, 0.09);
+  --border: rgba(180, 220, 240, 0.18);
+  --border-bright: rgba(120, 200, 255, 0.55);
+  --gold: #7fd8ff;
+  --gold-dim: #3a7c99;
+  --gold-glow: rgba(120, 200, 255, 0.2);
+  --red: #ff6b6b;
+  --teal: #4ecdc4;
+  --text: #e6f6ff;
+  --text-dim: #7fa6b8;
+  --text-bright: #ffffff;
+}
+
+/* ── Base ── */
+body {
+  margin: 0;
+  padding: 0px 3px 60px;
+  min-height: 100vh;
+  font-family: Verdana, Geneva, sans-serif;
+  text-align: center;
+  color: var(--text);
+  background-color: rgba(0, 0, 0, 0.7);
+  background-image: url('/wall.png');
+  background-repeat: no-repeat;
+  background-size: 600px;
+  background-position: center center;
+  background-attachment: fixed;
+  background-blend-mode: multiply;
+  background-color: rgba(0, 0, 0, 0.95);
+}
+
+/* ── Title ── */
+h1 {
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: clamp(15px, 5vw, 50px);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow:
+    0 0 20px rgba(120,200,255,0.7),
+    0 0 60px rgba(120,200,255,0.25);
+  margin: 10px 0 2px;
+  position: relative;
+}
+
+/* ── Headings ── */
+h3 {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 4px 0;
+}
+
+h3 span {
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 1.1em;
+}
+
+h2 {
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+h4 {
+  font-size: 11px;
+  text-align: left;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+/* ── Canvas ── */
+canvas {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 0 0 1px rgba(120,200,255,0.05),
+    0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Cards ── */
+.control-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.control-block,
+.control-block-small {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 1px 5px 1px;
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  text-align: center;
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+
+.control-block::before,
+.control-block-small::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
+}
+
+.control-block:hover,
+.control-block-small:hover {
+  border-color: var(--border-bright);
+}
+
+.control-block-small {
+  min-width: 120px;
+}
+
+/* ── Chart ── */
+.chart-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0;
+}
+
+.chart-container {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  position: relative;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-dim), transparent);
+}
+
+/* ── Buttons ── */
+button {
+  font-size: 18px;
+  margin: 6px;
+  width: 48px;
+  height: 48px;
+  background: var(--surface);
+  color: var(--gold);
+  border: 1px solid var(--border-bright);
+
+  /* pill shape */
+  border-radius: 16px;
+
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+
+  box-shadow:
+    0 0 14px var(--gold-glow),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  transition: all 0.15s ease;
+}
+
+button:hover {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow:
+    0 0 22px rgba(120,200,255,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 6px var(--gold-glow);
+}
+
+/* ── Wide buttons ── */
+.btn-wide {
+  width: auto;
+  height: auto;
+  padding: 11px 28px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  box-shadow: none;
+}
+
+.btn-wide:hover {
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 12px rgba(255,107,107,0.3);
+  background: transparent;
+  transform: none;
+}
+
+/* ── Files button override ── */
+a[href="/upload.html"] .btn-wide:hover {
+  border-color: var(--border-bright);
+  color: var(--gold);
+  box-shadow: 0 0 14px var(--gold-glow);
+}
+
+/* ── File manager ── */
+.file-entry {
+  margin: 5px 0;
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.delete-btn {
+  margin-left: 10px;
+  color: var(--red);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}

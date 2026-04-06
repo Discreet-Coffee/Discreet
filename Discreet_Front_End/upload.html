@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload File</title>
+  <link rel="stylesheet" href="global.css">
+</head>
+<body>
+	<a href="/" style="text-decoration: none;">
+	<button class="btn-wide">Back</button>
+	</a>
+	<BR>
+  <h1>File Management</h1>
+
+<form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload">
+  <label for="fileUpload" class="btn-wide">Choose File</label>
+  <span id="fileName"></span>
+  <input 
+    id="fileUpload"
+    type="file"
+    name="upload"
+    required
+    style="display:none;">
+
+  <input class="btn-wide" type="submit" value="Upload">
+
+</form>
+
+  <p id="status" style="color: green;"></p>
+
+  <h2>Files on SD Card</h2>
+  <div id="fileList">Loading...</div>
+
+  <script src="upload.js"></script>
+</body>
+</html>

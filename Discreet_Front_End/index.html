@@ -1,0 +1,65 @@
+<html>
+	<head>
+		<title>Discreet Coffee</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="shortcut icon" sizes="152x152" href="/wall.png">
+		<link rel="stylesheet" href="global.css">
+		<script src="chart.js"></script>
+	</head>
+	<body>
+		<h1>Discreet Coffee</h1>
+		<script src="gauge.min.js"></script>
+		<canvas id="gauge" width="250" height="250"></canvas>
+		<script src="gauge.js"></script>
+	
+		<h3><span id='pressure'>0</span> Bar   <span id='pumppower'>0</span> Pump Power</h3>
+		
+		<div class="chart-wrapper">
+			<div class="chart-container">
+				<h3>Temperature Graph</h3>
+				<canvas id="tempChart" width="350" height="150"></canvas>
+				<script src="graph.js"></script>
+			</div>
+		</div>
+
+		<h3>Shot Timer: <span id='actimelabel'>0</span> seconds</h3>
+
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Brew Temp:<span id='setpointlabel'>&deg;C</span></h3>
+		<button onclick="adjust('setpoint', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('setpoint', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		<div class="control-block">
+		<h3>P-Infusion:<span id='preinftimelabel'> S</span></h3>
+		<button onclick="adjust('preinftime', -1000)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('preinftime', 1000)">&nbsp;+&nbsp;</button>
+		</div>
+		</div>
+		
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Pressure: <span id='pressuresetpoint'> Bar</span></h3>
+		<button onclick="adjust('pressuresetpoint', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('pressuresetpoint', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		<div class="control-block">
+		<h3>Bloom: <span id='bloomtime'> S</span></h3>
+		<button onclick="adjust('bloomtime', -1000)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('bloomtime', 1000)">&nbsp;+&nbsp;</button>
+
+		</div>
+		</div>
+		<br>
+		<button class="btn-wide" onclick="adjust('steam', 0)">Steam</button>
+		<button class="btn-wide" onclick="adjust('stopsteam', 0)">Stop Steam</button>
+		<br>
+		<h3>Maintenance</h3>
+		<button class="btn-wide" onclick="adjust('setpoint', -100)">No Heat</button>
+		<a href="/upload.html"><button class="btn-wide">Files</button></a>
+		<a href="/themes.html"><button class="btn-wide">Themes</button></a>
+		<br>
+		<script src="scripts.js"></script>
+	</body>
+</html>
