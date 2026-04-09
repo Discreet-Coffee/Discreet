@@ -60,8 +60,8 @@ int maxPressure = 12;
 double currentPressure = 0;
 
 // Timeing Intervals
-const int PRESS_INTERVAL = 100;  // 250ms
-const int PID_INTERVAL = 250;  // 250ms
+const int PRESS_INTERVAL = 50;  // X ms
+const int PID_INTERVAL = 250;  // X ms
 
 // Timer Variables
 unsigned long lastPIDTime = 0;
@@ -401,7 +401,7 @@ void SetPump() {
   if (millis() - DimlastUpdate > PRESS_INTERVAL) {
 
     DimlastUpdate = millis();
-
+    /*
     if (currentPressure < PressureTarget - 0.1) {
         pumppower++;
     } else if (currentPressure > PressureTarget + 1.5) {
@@ -418,7 +418,12 @@ void SetPump() {
     
     pumppower = constrain(pumppower, 140, 255);
     light.setBrightness(pumppower);
-    
+    */
+    if (currentPressure < PressureTarget - 0.2) {
+       light.setBrightness(200);
+    } else if (currentPressure > PressureTarget + 0.2) {
+       light.setBrightness(0);
+}
   }
 
 }
@@ -571,25 +576,26 @@ void loop() {
     elapsedTime = millis() - acDetectedTime;
     actime = elapsedTime / 1000;
 
-    if (elapsedTime < 1500) {
-      light.setBrightness(255);
-      runPID();
-      }
+    //if (elapsedTime < 1500) {
+    //  light.setBrightness(255);
+    //  runPID();
+    //  }
     
     //Pre Infution
     if (preinftime > 0 && !PrePressSet) {
+      PrePressSet = true;
       PressureTarget = PrePressureSetpoint;
-      pumppower = basePumpPowerForSetpoint(PressureTarget);
-      if (currentPressure < PressureTarget - 0.5) {PrePressSet = true;}
+      //pumppower = basePumpPowerForSetpoint(PressureTarget);
+      //if (currentPressure < PressureTarget - 0.5) {PrePressSet = true;}
     } 
     
     //Extraction
-    if (actime > preinftime / 1000 && !PressSet){
-      
+    if (elapsedTime > preinftime && !PressSet){
+      PressSet = true;
       PressureTarget = pressuresetpoint;
-      pumppower = basePumpPowerForSetpoint(PressureTarget);
+      //pumppower = basePumpPowerForSetpoint(PressureTarget);
 
-      if (currentPressure < PressureTarget - 0.5) {PressSet = true;}
+      //if (currentPressure < PressureTarget - 0.5) {PressSet = true;}
     }
 
     SetPump();
