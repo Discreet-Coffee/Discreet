@@ -395,38 +395,50 @@ int basePumpPowerForSetpoint(double Pumpsetpoint) {
   return 190;
 }
 
+
 void SetPump() {
 
   // Only update after boost every xxx ms
   if (millis() - DimlastUpdate > PRESS_INTERVAL) {
-
     DimlastUpdate = millis();
-    /*
-    if (currentPressure < PressureTarget - 0.1) {
-        pumppower++;
-    } else if (currentPressure > PressureTarget + 1.5) {
-        pumppower -= 10;
-    } else if (currentPressure > PressureTarget + 1) {
-        pumppower -= 7;
-    } else if (currentPressure > PressureTarget + 0.5) {
-        pumppower -= 5;
-    } else if (currentPressure > PressureTarget + 0.4) {
-        pumppower -= 4;
-    } else if (currentPressure > PressureTarget + 0.3) {
-        pumppower -= 3;
+
+    static int callCount = 0;
+    callCount++;
+    // Slow - adjust pump power every 300ms (every 6 calls)
+    if (callCount >= 6) {
+      callCount = 0;
+      if (currentPressure < PressureTarget - 0.2) {pumppower++;} 
+      //else if (currentPressure > PressureTarget + 0.3) {pumppower -= 2;} 
+      else if (currentPressure > PressureTarget + 0.2) {pumppower--;}      
+      light.setBrightness(pumppower);
     }
-    
-    pumppower = constrain(pumppower, 140, 255);
-    light.setBrightness(pumppower);
-    */
+
+    // Fast - cut pump if overpressure every 50ms
+    if (currentPressure > PressureTarget + 0.3) {
+      light.setBrightness(0);
+    }
+
+  }
+
+}
+
+
+/*
+void SetPump() { //pulse only
+
+  // Only update after boost every xxx ms
+  if (millis() - DimlastUpdate > PRESS_INTERVAL) {
+
     if (currentPressure < PressureTarget - 0.2) {
        light.setBrightness(200);
     } else if (currentPressure > PressureTarget + 0.2) {
        light.setBrightness(0);
-}
+     }
   }
 
 }
+*/
+
 
 void setup() {
 
@@ -576,26 +588,30 @@ void loop() {
     elapsedTime = millis() - acDetectedTime;
     actime = elapsedTime / 1000;
 
-    //if (elapsedTime < 1500) {
-    //  light.setBrightness(255);
-    //  runPID();
-    //  }
-    
     //Pre Infution
     if (preinftime > 0 && !PrePressSet) {
-      PrePressSet = true;
+      pumppower = 255;
+      light.setBrightness(pumppower);
       PressureTarget = PrePressureSetpoint;
-      //pumppower = basePumpPowerForSetpoint(PressureTarget);
-      //if (currentPressure < PressureTarget - 0.5) {PrePressSet = true;}
+      
+      if (currentPressure > PressureTarget - 1) {
+        PrePressSet = true;
+        pumppower = basePumpPowerForSetpoint(PressureTarget);
+        light.setBrightness(pumppower);
+        }
     } 
     
     //Extraction
     if (elapsedTime > preinftime && !PressSet){
-      PressSet = true;
+      pumppower = 255;
+      light.setBrightness(pumppower);
       PressureTarget = pressuresetpoint;
-      //pumppower = basePumpPowerForSetpoint(PressureTarget);
 
-      //if (currentPressure < PressureTarget - 0.5) {PressSet = true;}
+      if (currentPressure > PressureTarget - 1) {
+        PressSet = true;
+        pumppower = basePumpPowerForSetpoint(PressureTarget);
+        light.setBrightness(pumppower);
+        }
     }
 
     SetPump();
