@@ -60,8 +60,7 @@ int maxPressure = 12;
 double currentPressure = 0;
 
 // Timeing Intervals
-const int PRESS_INTERVAL = 250;  // 250ms
-const int PUMP_INTERVAL = 300;  // tune this to update the pump reactrion time
+const int PRESS_INTERVAL = 100;  // 250ms
 const int PID_INTERVAL = 250;  // 250ms
 
 // Timer Variables
@@ -298,18 +297,6 @@ void handlePressure() {
   server.send(200, "text/plain", String(currentPressure, 2));
 }
 
-int basePumpPowerForSetpoint(double Pumpsetpoint) {
-  if (Pumpsetpoint <= 3) return 140;
-  if (Pumpsetpoint <= 4) return 143;
-  if (Pumpsetpoint <= 5) return 147;
-  if (Pumpsetpoint <= 6) return 149;
-  if (Pumpsetpoint <= 7) return 153;
-  if (Pumpsetpoint <= 8) return 155;
-  if (Pumpsetpoint <= 9) return 160;
-  if (Pumpsetpoint <= 10) return 170;
-  return 190;
-}
-
 void beepBuzzer(int times, int beepDuration, int pauseDuration) {
 
   for (int i = 0; i < times; i++) {
@@ -396,24 +383,42 @@ String getContentType(String filename) {
   return "text/plain";
 }
 
+int basePumpPowerForSetpoint(double Pumpsetpoint) {
+  if (Pumpsetpoint <= 3) return 140;
+  if (Pumpsetpoint <= 4) return 143;
+  if (Pumpsetpoint <= 5) return 147;
+  if (Pumpsetpoint <= 6) return 149;
+  if (Pumpsetpoint <= 7) return 153;
+  if (Pumpsetpoint <= 8) return 155;
+  if (Pumpsetpoint <= 9) return 160;
+  if (Pumpsetpoint <= 10) return 170;
+  return 190;
+}
+
 void SetPump() {
 
-
   // Only update after boost every xxx ms
-  if (millis() - DimlastUpdate > 300) {
+  if (millis() - DimlastUpdate > PRESS_INTERVAL) {
 
     DimlastUpdate = millis();
 
-    if (currentPressure < PressureTarget - 0.1) pumppower++;
-    if (currentPressure > PressureTarget + 0.5) pumppower--;
-
-    pumppower = constrain(pumppower, 0, 255);
+    if (currentPressure < PressureTarget - 0.1) {
+        pumppower++;
+    } else if (currentPressure > PressureTarget + 1.5) {
+        pumppower -= 10;
+    } else if (currentPressure > PressureTarget + 1) {
+        pumppower -= 7;
+    } else if (currentPressure > PressureTarget + 0.5) {
+        pumppower -= 5;
+    } else if (currentPressure > PressureTarget + 0.4) {
+        pumppower -= 4;
+    } else if (currentPressure > PressureTarget + 0.3) {
+        pumppower -= 3;
+    }
+    
+    pumppower = constrain(pumppower, 140, 255);
     light.setBrightness(pumppower);
-  }
-
-    //stop pump if x bar over target no time restriction
-  if (currentPressure > PressureTarget + 0.8) {
-    light.setBrightness(0);
+    
   }
 
 }
@@ -573,14 +578,18 @@ void loop() {
     
     //Pre Infution
     if (preinftime > 0 && !PrePressSet) {
-      PrePressSet = true;
       PressureTarget = PrePressureSetpoint;
+      pumppower = basePumpPowerForSetpoint(PressureTarget);
+      if (currentPressure < PressureTarget - 0.5) {PrePressSet = true;}
     } 
-
+    
+    //Extraction
     if (actime > preinftime / 1000 && !PressSet){
-      PressSet = true;
+      
       PressureTarget = pressuresetpoint;
       pumppower = basePumpPowerForSetpoint(PressureTarget);
+
+      if (currentPressure < PressureTarget - 0.5) {PressSet = true;}
     }
 
     SetPump();
