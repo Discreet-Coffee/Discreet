@@ -405,35 +405,56 @@ void SetPump() {
     static int callCount = 0;
     callCount++;
     // Slow - adjust pump power every 300ms (every 6 calls)
-    if (callCount >= 6) {
+    if (callCount >= 4) {
       callCount = 0;
-      if (currentPressure < PressureTarget - 0.2) {pumppower++;} 
-      //else if (currentPressure > PressureTarget + 0.3) {pumppower -= 2;} 
-      else if (currentPressure > PressureTarget + 0.2) {pumppower--;}      
-      light.setBrightness(pumppower);
+      if (currentPressure < PressureTarget - 0.2) { pumppower = constrain(pumppower + 1, 120, 255); }
+      else if (currentPressure > PressureTarget + 0.2) { pumppower = constrain(pumppower - 2, 120, 255); }
     }
 
     // Fast - cut pump if overpressure every 50ms
-    if (currentPressure > PressureTarget + 0.3) {
-      light.setBrightness(0);
-    }
+    if (currentPressure > PressureTarget + 0.3) {light.setBrightness(0);}
+    else {light.setBrightness(pumppower);}
 
   }
 
 }
 
 
-/*
-void SetPump() { //pulse only
+/* Faster decreate then increase
+void SetPump() {
 
   // Only update after boost every xxx ms
   if (millis() - DimlastUpdate > PRESS_INTERVAL) {
+    DimlastUpdate = millis();
 
-    if (currentPressure < PressureTarget - 0.2) {
-       light.setBrightness(200);
-    } else if (currentPressure > PressureTarget + 0.2) {
-       light.setBrightness(0);
-     }
+    static int callCountLow = 0;
+    callCountLow++;
+    // Slow - adjust pump power every 300ms (every 6 calls)
+    if (callCountLow >= 4) {
+      callCountLow = 0;
+      if (currentPressure < PressureTarget - 0.2) {
+        pumppower++;
+        light.setBrightness(pumppower);
+      }
+    }
+
+    static int callCountHigh = 0;
+    callCountHigh++;
+    // Slow - adjust pump power every X x 50ms
+    if (callCountHigh >= 3) {
+      callCountHigh = 0;
+      if (currentPressure > PressureTarget + 0.2) {
+        pumppower--;      
+        light.setBrightness(pumppower);
+      }
+    }
+
+
+    // Fast - cut pump if overpressure every 50ms
+    if (currentPressure > PressureTarget + 0.3) {
+      light.setBrightness(0);
+    } else {light.setBrightness(pumppower)}
+
   }
 
 }
