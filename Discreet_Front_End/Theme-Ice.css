@@ -12,6 +12,10 @@
   --text: #e6f6ff;
   --text-dim: #7fa6b8;
   --text-bright: #ffffff;
+  --gauge-low: #3c3c3c;     /* Gauge 0-3 (leave grey) */ 
+  --gauge-mid: #3a7c99;     /* Gauge 3-7 BAR (light color) */
+  --gauge-high: #4ecdc4;    /* Gauge 7-10 BAR (medium color)*/
+  --gauge-danger: #5e0000;  /* Gauge DANGER (dark color) */
 }
 
 /* ── Base ── */

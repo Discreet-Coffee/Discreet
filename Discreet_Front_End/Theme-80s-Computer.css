@@ -1,0 +1,327 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/* Westminster via CDN fallback chain */
+@font-face {
+  font-family: 'Westminster';
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --bg: #000800;
+  --surface: rgba(0, 180, 0, 0.05);
+  --surface-hover: rgba(0, 180, 0, 0.10);
+  --border: rgba(0, 200, 0, 0.2);
+  --border-bright: rgba(0, 255, 0, 0.6);
+  --gold: #00ff00;
+  --gold-dim: #005500;
+  --gold-glow: rgba(0, 255, 0, 0.15);
+  --red: #ff4000;
+  --teal: #00cc44;
+  --text: #00dd00;
+  --text-dim: #007700;
+  --text-bright: #00ff00;
+  --scanline: rgba(0, 0, 0, 0.25);
+  --phosphor: rgba(0, 255, 0, 0.03);
+  --gauge-low: #3c3c3c;     /* Gauge 0-3 (leave grey) */
+  --gauge-mid: #00aa00;     /* Gauge 3-7 BAR (light color) */
+  --gauge-high: #007700;    /* Gauge 7-10 BAR (medium color)*/
+  --gauge-danger: #003300;  /* Gauge DANGER (dark color*/
+}
+
+/* ── Scanline overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    var(--scanline) 2px,
+    var(--scanline) 4px
+  );
+}
+
+/* ── CRT flicker ── */
+@keyframes flicker {
+  0%   { opacity: 1; }
+  92%  { opacity: 1; }
+  93%  { opacity: 0.93; }
+  94%  { opacity: 1; }
+  96%  { opacity: 0.97; }
+  100% { opacity: 1; }
+}
+
+@keyframes phosphor-fade {
+  0%   { text-shadow: 0 0 8px #00ff00, 0 0 20px #00aa00; }
+  50%  { text-shadow: 0 0 12px #00ff00, 0 0 30px #00aa00, 0 0 60px #004400; }
+  100% { text-shadow: 0 0 8px #00ff00, 0 0 20px #00aa00; }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Base ── */
+body {
+  margin: 0;
+  padding: 0px 3px 60px;
+  min-height: 100vh;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  text-align: center;
+  color: var(--text);
+  background-color: #000800;
+  background-image: url('/wall.png');
+  background-repeat: no-repeat;
+  background-size: 600px;
+  background-position: center center;
+  background-attachment: fixed;
+  background-blend-mode: multiply;
+  animation: flicker 8s infinite;
+
+  /* CRT vignette */
+  box-shadow: inset 0 0 120px rgba(0,0,0,0.9);
+}
+
+/* ── Title ── */
+h1 {
+  font-family: 'Westminster', 'Share Tech Mono', monospace;
+  font-size: clamp(13px, 4.5vw, 44px);
+  font-weight: normal;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #00ff00;
+  animation: phosphor-fade 3s ease-in-out infinite;
+  margin: 14px 0 4px;
+  position: relative;
+}
+
+/* blinking cursor after title */
+h1::after {
+  content: '_';
+  animation: cursor-blink 1s step-end infinite;
+  color: #00ff00;
+  margin-left: 4px;
+}
+
+/* ── Headings ── */
+h3 {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: normal;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 4px 0;
+}
+
+h3 span {
+  color: var(--gold);
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  font-size: 1.1em;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+
+h2 {
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+h4 {
+  font-size: 11px;
+  text-align: left;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* ── Canvas ── */
+canvas {
+  background-color: rgba(0, 10, 0, 0.6);
+  border-radius: 0px;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 0 0 1px rgba(0,255,0,0.05),
+    0 0 20px rgba(0,255,0,0.08),
+    0 8px 32px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Cards ── */
+.control-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.control-block,
+.control-block-small {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  padding: 5px 1px 5px 1px;
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  text-align: center;
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+
+/* top accent line */
+.control-block::before,
+.control-block-small::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #00aa00, transparent);
+}
+
+/* bottom prompt line */
+.control-block::after,
+.control-block-small::after {
+  content: '> _';
+  position: absolute;
+  bottom: 3px;
+  right: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  color: var(--gold-dim);
+  animation: cursor-blink 1.2s step-end infinite;
+}
+
+.control-block:hover,
+.control-block-small:hover {
+  border-color: var(--border-bright);
+  background: var(--surface-hover);
+  box-shadow: 0 0 10px rgba(0,255,0,0.1);
+}
+
+.control-block-small {
+  min-width: 120px;
+}
+
+/* ── Chart ── */
+.chart-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0;
+}
+
+.chart-container {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  padding: 14px;
+  position: relative;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #00aa00, transparent);
+}
+
+/* ── Buttons ── */
+button {
+  font-size: 18px;
+  margin: 6px;
+  width: 48px;
+  height: 48px;
+  background: var(--surface);
+  color: var(--gold);
+  border: 1px solid var(--border-bright);
+  border-radius: 0px;
+  cursor: pointer;
+  font-weight: normal;
+  font-family: 'Share Tech Mono', monospace;
+
+  box-shadow:
+    0 0 10px var(--gold-glow),
+    inset 0 0 8px rgba(0,255,0,0.03);
+
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+button:hover {
+  background: rgba(0, 255, 0, 0.12);
+  border-color: var(--gold);
+  color: #00ff00;
+  box-shadow:
+    0 0 20px rgba(0,255,0,0.3),
+    inset 0 0 12px rgba(0,255,0,0.08);
+  transform: none;
+  text-shadow: 0 0 8px #00ff00;
+}
+
+button:active {
+  background: rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 6px rgba(0,255,0,0.4), inset 0 0 6px rgba(0,255,0,0.15);
+}
+
+/* ── Wide buttons ── */
+.btn-wide {
+  width: auto;
+  height: auto;
+  padding: 11px 28px;
+  border-radius: 0px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-family: 'Share Tech Mono', monospace;
+  box-shadow: none;
+}
+
+.btn-wide:hover {
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 12px rgba(255, 64, 0, 0.3);
+  background: transparent;
+  transform: none;
+  text-shadow: 0 0 6px rgba(255,64,0,0.5);
+}
+
+/* ── Files button override ── */
+a[href="/upload.html"] .btn-wide:hover {
+  border-color: var(--border-bright);
+  color: var(--gold);
+  box-shadow: 0 0 14px var(--gold-glow);
+  text-shadow: 0 0 8px #00ff00;
+}
+
+/* ── File manager ── */
+.file-entry {
+  margin: 5px 0;
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: 0.05em;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.delete-btn {
+  margin-left: 10px;
+  color: var(--red);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
