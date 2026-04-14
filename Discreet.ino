@@ -74,11 +74,12 @@ int actime = 0;  // Shot time in seconds
 
 //Other Variables
 int offset = 9; // Due to probe location. If you ask for 100 you will get 91, tune this variable.
-int preinftime = 8000;
+int preinftime = 8;
 
 bool acDetected = false;
-bool PrePressSet = false;
-bool PressSet = false;
+bool shotStarted = false;
+bool pumpPowerSetPreinf = false;
+bool pumpPowerSetExtraction = false;
 
 int bloomtime = 0;
 int offcount = 0;
@@ -235,11 +236,11 @@ void handleAdjust() {
   int val = server.arg("val").toInt();
 
   if (var == "preinftime") {
-    preinftime = constrain(preinftime + val, 0, 20000);
+    preinftime = constrain(preinftime + val, 0, 20);
     pumppower = basePumpPowerForSetpoint(PrePressureSetpoint);
   }  
   else if (var == "bloomtime") {
-    bloomtime = constrain(bloomtime + val, 0, 20000);
+    bloomtime = constrain(bloomtime + val, 0, 20);
   }
   else if (var == "Pause") {
     light.setBrightness(0);
@@ -337,7 +338,7 @@ void runPID() {
     
     input = thermocouple.readCelsius();
   
-    if (isnan(input) || input < 0 || input > 110) {
+    if (isnan(input) || input < 0 || input > 160) {
       digitalWrite(SSR_PIN, LOW); // SSR Off
       return; // Exit function, SSR stays off
     }
@@ -418,48 +419,6 @@ void SetPump() {
   }
 
 }
-
-
-/* Faster decreate then increase
-void SetPump() {
-
-  // Only update after boost every xxx ms
-  if (millis() - DimlastUpdate > PRESS_INTERVAL) {
-    DimlastUpdate = millis();
-
-    static int callCountLow = 0;
-    callCountLow++;
-    // Slow - adjust pump power every 300ms (every 6 calls)
-    if (callCountLow >= 4) {
-      callCountLow = 0;
-      if (currentPressure < PressureTarget - 0.2) {
-        pumppower++;
-        light.setBrightness(pumppower);
-      }
-    }
-
-    static int callCountHigh = 0;
-    callCountHigh++;
-    // Slow - adjust pump power every X x 50ms
-    if (callCountHigh >= 3) {
-      callCountHigh = 0;
-      if (currentPressure > PressureTarget + 0.2) {
-        pumppower--;      
-        light.setBrightness(pumppower);
-      }
-    }
-
-
-    // Fast - cut pump if overpressure every 50ms
-    if (currentPressure > PressureTarget + 0.3) {
-      light.setBrightness(0);
-    } else {light.setBrightness(pumppower)}
-
-  }
-
-}
-*/
-
 
 void setup() {
 
@@ -600,53 +559,68 @@ void loop() {
   if (digitalRead(syncPin) == LOW && !acDetected) {
     acDetectedTime = millis();
     acDetected = true;
-    digitalWrite(SSR_PIN, HIGH); //turns on heatater ready for cold water.
   }
 
   if (acDetected) {
 
-    //Set Timings
+    // Run once at shot start
+    if (!shotStarted) {
+      shotStarted = true;
+      preinftime = (bloomtime > 0 && preinftime < 5) ? 8 : preinftime;
+    }
+
+    // Calculate shot time
     elapsedTime = millis() - acDetectedTime;
     actime = elapsedTime / 1000;
 
-    //Pre Infution
-    if (preinftime > 0 && !PrePressSet) {
-      pumppower = 255;
-      light.setBrightness(pumppower);
-      PressureTarget = PrePressureSetpoint;
-      
-      if (currentPressure > PressureTarget - 1) {
-        PrePressSet = true;
-        pumppower = basePumpPowerForSetpoint(PressureTarget);
-        light.setBrightness(pumppower);
-        }
-    } 
-    
-    //Extraction
-    if (elapsedTime > preinftime && !PressSet){
-      pumppower = 255;
-      light.setBrightness(pumppower);
-      PressureTarget = pressuresetpoint;
-
-      if (currentPressure > PressureTarget - 1) {
-        PressSet = true;
-        pumppower = basePumpPowerForSetpoint(PressureTarget);
-        light.setBrightness(pumppower);
-        }
+    // --- PRE-INFUSION ---
+    if (preinftime > 0 && actime < preinftime) {
+      if (currentPressure < PrePressureSetpoint - 1) {
+        pumppower = 255;
+        light.setBrightness(pumppower);      
+      }
+      else if (!pumpPowerSetPreinf) {
+         PressureTarget = PrePressureSetpoint;
+         pumppower = basePumpPowerForSetpoint(PressureTarget); // runs once
+         light.setBrightness(pumppower);
+         pumpPowerSetPreinf = true;  // prevents it running again
+         SetPump();
+      }
+      else SetPump();
     }
 
-    SetPump();
+    // --- BLOOM ---
+    else if (bloomtime > 0 && actime < preinftime + bloomtime) {
+      pumppower = 0;
+      light.setBrightness(pumppower);
+    }
 
-    //AC Turned off
+    // --- EXTRACTION ---
+    else {
+      if (currentPressure < pressuresetpoint - 2) {
+        pumppower = 255;
+        light.setBrightness(pumppower);
+      }
+      else if (!pumpPowerSetExtraction) {
+         PressureTarget = pressuresetpoint;
+         pumppower = basePumpPowerForSetpoint(PressureTarget); // runs once
+         light.setBrightness(pumppower);
+         pumpPowerSetExtraction = true;  // prevents it running again
+         SetPump();
+      }
+      else SetPump();
+    }
+
+    // AC Turned off
     if (digitalRead(syncPin) == HIGH) offcount++;
     else offcount = 0;
 
-    if (offcount >= 100) { //When AC is off reset bools
+    if (offcount >= 100) {
       acDetected = false;
-      PrePressSet = false;
-      PressSet = false;
+      shotStarted = false;
+      pumpPowerSetPreinf = false;
+      pumpPowerSetExtraction = false;
       offcount = 0;
     }
   }
-
 }

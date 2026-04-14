@@ -30,8 +30,8 @@ setInterval(async () => {
 
 function adjust(variable, value) {
   fetch(`/adjust?var=${variable}&val=${value}`)
-    .then(() => updateLabels())
-    .catch(err => console.error("Adjust failed", err));
+  .then(() => updateLabels())
+  .catch(err => console.error("Adjust failed", err));
 }
 
 function updateLabels() {
@@ -39,8 +39,8 @@ function updateLabels() {
     .then(res => res.json())
     .then(data => {
       document.getElementById('setpointlabel').innerHTML = data.setpoint + "&deg;C";
-      document.getElementById('preinftimelabel').innerText = (data.preinftime / 1000) + " S";
-      document.getElementById('bloomtime').innerText = (data.bloomtime / 1000) + " S";
+      document.getElementById('preinftimelabel').innerText = (data.preinftime) + " S";
+      document.getElementById('bloomtime').innerText = (data.bloomtime) + " S";
       document.getElementById('pressuresetpoint').innerText = data.pressuresetpoint + " Bar";
     });
 }
