@@ -42,6 +42,9 @@ function updateLabels() {
       document.getElementById('preinftimelabel').innerText = (data.preinftime) + " S";
       document.getElementById('bloomtime').innerText = (data.bloomtime) + " S";
       document.getElementById('pressuresetpoint').innerText = data.pressuresetpoint + " Bar";
+	  document.getElementById('Kp').innerText = data.Kp  + " Kp";
+	  document.getElementById('Ki').innerText = data.Ki  + " Ki";
+	  document.getElementById('Kd').innerText = data.Kd  + " Kd";
     });
 }
 

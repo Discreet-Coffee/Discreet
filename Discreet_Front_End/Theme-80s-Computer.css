@@ -8,7 +8,7 @@
 }
 
 :root {
-  --bg: #000800;
+  --bg: #000000;
   --surface: rgba(0, 180, 0, 0.05);
   --surface-hover: rgba(0, 180, 0, 0.10);
   --border: rgba(0, 200, 0, 0.2);
@@ -79,7 +79,7 @@ body {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   text-align: center;
   color: var(--text);
-  background-color: #000800;
+  background-color: rgba(0, 0, 0, 0.9);
   background-image: url('/wall.png');
   background-repeat: no-repeat;
   background-size: 600px;
@@ -89,7 +89,7 @@ body {
   animation: flicker 8s infinite;
 
   /* CRT vignette */
-  box-shadow: inset 0 0 120px rgba(0,0,0,0.9);
+  box-shadow: inset 0 0 120px rgba(0,0,0,0.8);
 }
 
 /* ── Title ── */

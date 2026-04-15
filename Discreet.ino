@@ -287,6 +287,9 @@ void handleGetValues() {
   doc["pressuresetpoint"] = int(pressuresetpoint);
   doc["actime"] = actime;
   doc["temp"] = input - offset;
+  doc["Kp"] = Kp;
+  doc["Ki"] = Ki;
+  doc["Kd"] = Kd;
 
   // Use a buffer to generate the JSON, then send it
   String response;
@@ -443,9 +446,17 @@ void setup() {
     StaticJsonDocument<256> doc;
     deserializeJson(doc, configFile);
     configFile.close();
-    ssid = doc["ssid"].as<String>();
-    password = doc["password"].as<String>();
+    
+    ssid = doc["ssid"] | "";
+    password = doc["password"] | "";
+    Kp = doc["Kp"] | Kp;
+    Ki = doc["Ki"] | Ki;
+    Kd = doc["Kd"] | Kd;
     Serial.println("SSID: " + ssid);
+    Serial.println(Kp);
+    Serial.println(Ki);
+    Serial.println(Kd);
+  
   }
   
   //end SD and SPI

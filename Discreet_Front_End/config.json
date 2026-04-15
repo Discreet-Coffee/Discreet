@@ -1,4 +1,7 @@
 {
     "ssid": "WIFI_SID",
-    "password": "PASSWORD"
+    "password": "PASSWORD",
+	"Kp": 48,
+	"Ki" 8,
+	"Kd" 50,
 }
