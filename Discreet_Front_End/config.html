@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Configuration</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="global.css">
+
+    <!-- JS file loaded separately -->
+    <script src="config.js" defer></script>
+
+</head>
+
+<body>
+
+<h1>System Configuration</h1>
+
+<div class="config-container">
+
+    <h3>WiFi Settings</h3>
+
+    <label for="ssid">SSID</label><br>
+    <input id="ssid" type="text"><br><br>
+
+    <label for="password">Password</label><br>
+    <input id="password" type="text"><br><br>
+
+
+    <h3>PID Settings</h3>
+
+    <label for="Kp">Kp</label><br>
+    <input id="Kp" type="number" step="1"><br><br>
+
+    <label for="Ki">Ki</label><br>
+    <input id="Ki" type="number" step="1"><br><br>
+
+    <label for="Kd">Kd</label><br>
+    <input id="Kd" type="number" step="1"><br><br>
+
+
+    <button class="btn-wide" onclick="saveConfig()">
+        Save Configuration
+    </button>
+
+</div>
+
+<br>
+<a href="/"><button class="btn-wide">Back</button></a>
+<br>
+<a href="/themes.html"><button class="btn-wide">Themes</button></a>
+<a href="/config.html"><button class="btn-wide">Config</button></a>
+<a href="/upload.html"><button class="btn-wide">Files</button></a>
+</body>
+
+</html>

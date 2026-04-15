@@ -520,6 +520,51 @@ void setup() {
     file.close();
   });
 
+  server.on("/getConfig", HTTP_GET, []() {
+
+    File file = SD.open("/config.json", FILE_READ);
+
+    if (!file) {
+      Serial.println("Failed to open config.json");
+      server.send(500, "text/plain", "Config not found");
+      return;
+    }
+
+    server.streamFile(file, "application/json");
+
+    file.close();
+
+  });
+
+  server.on("/saveConfig", HTTP_POST, []() {
+  
+    StaticJsonDocument<256> doc;
+  
+    if (deserializeJson(doc, server.arg("plain"))) {
+      server.send(400, "text/plain", "Invalid JSON");
+      return;
+    }
+  
+    // Remove old config
+    SD.remove("/config.json");
+  
+    File file = SD.open("/config.json", FILE_WRITE);
+  
+    if (!file) {
+      server.send(500, "text/plain", "Write failed");
+      return;
+    }
+  
+    serializeJson(doc, file);
+  
+    file.close();
+  
+    Serial.println("Config saved");
+  
+    server.send(200, "text/plain", "Saved");
+  
+  });
+
   server.on("/applyTheme", HTTP_GET, handleApplyTheme);
   server.on("/getCurrentTheme", HTTP_GET, getCurrentTheme);
   server.on("/adjust", handleAdjust);

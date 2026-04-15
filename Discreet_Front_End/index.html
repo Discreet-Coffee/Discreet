@@ -52,18 +52,24 @@
 
 		</div>
 		</div>
-		<h3>Mode</h3>
+		<h2>Mode</h2>
 		<button class="btn-wide" onclick="adjust('stopsteam', 0)">Brew</button>
 		<button class="btn-wide" onclick="adjust('steam', 0)">Steam</button>
 		<br>
-		<h3>Maintenance</h3>
-		<button class="btn-wide" onclick="adjust('setpoint', -1000)">10&deg;C</button>
-		<a href="/upload.html"><button class="btn-wide">Files</button></a>
-		<a href="/themes.html"><button class="btn-wide">Themes</button></a>
-		<br>
-		<h3>PID Values</h3>
-		<br>
+	    <h2>PID Values</h2>
 		<span id='Kp'></span>&nbsp;-&nbsp;<span id='Ki'></span>&nbsp;-&nbsp;<span id='Kd'></span>
+		<br>
+		<br>
+		<h2>Maintenance</h2>
+		<a href="/themes.html"><button class="btn-wide">Themes</button></a>
+		<a href="/config.html"><button class="btn-wide">Config</button></a>
+		<a href="/upload.html"><button class="btn-wide">Files</button></a>
+		
+		<!-- This button is to stop the element from heating when coding -->
+		<!--<button class="btn-wide" onclick="adjust('setpoint', -1000)">10&deg;C</button>-->
+		
+		<br>
+
 		<br>
 	</body>
 </html>
