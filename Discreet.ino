@@ -408,7 +408,7 @@ void SetPump() {
 
     static int callCount = 0;
     callCount++;
-    // Slow - adjust pump power every 300ms (every 6 calls)
+    // Slow - adjust pump power every 50ms (per count)
     if (callCount >= 4) {
       callCount = 0;
       if (currentPressure < PressureTarget - 0.2) { pumppower = constrain(pumppower + 1, 120, 255); }
@@ -423,87 +423,8 @@ void SetPump() {
 
 }
 
-void setup() {
+void setupServerRoutes() {
 
-  Serial.begin(115200);
-  delay(2000);
-
-  pinMode(BUZZER_PIN, OUTPUT);
-
-  // SD Card Setup - just for config read
-  SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-  if (!SD.begin(SD_CS)) {
-    Serial.println("SD card initialization failed!");
-    beepBuzzer(3,1000,200);
-  } else {
-    Serial.println("SD card initialized.");
-    beepBuzzer(1,100,100);
-  }
-
-  // Read config
-  File configFile = SD.open("/config.json");
-  if (configFile) {
-    StaticJsonDocument<256> doc;
-    deserializeJson(doc, configFile);
-    configFile.close();
-    
-    ssid = doc["ssid"] | "";
-    password = doc["password"] | "";
-    Kp = doc["Kp"] | Kp;
-    Ki = doc["Ki"] | Ki;
-    Kd = doc["Kd"] | Kd;
-    Serial.println("SSID: " + ssid);
-    Serial.println(Kp);
-    Serial.println(Ki);
-    Serial.println(Kd);
-  
-  }
-  
-  //end SD and SPI
-  SD.end();
-  SPI.end();  // fully kill SPI
-  delay(200);
-
-  // WiFi Setup
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid.c_str(), password.c_str());
-
-  unsigned long t0 = millis();
-  Serial.println("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
-   delay(500);
-   Serial.print(".");
-  }
-
-  if (WiFi.status() != WL_CONNECTED) {
-    beepBuzzer(5,1000,200);
-    Serial.println("FAILED connecting to WiFi");
-  } else {
-    beepBuzzer(1,500,100);
-    Serial.println("WiFi Connected!");
-    WiFi.config(WiFi.localIP(), IPAddress(0,0,0,0), WiFi.subnetMask(), IPAddress(0,0,0,0));
-    Serial.println("IP:  " + WiFi.localIP().toString());
-    Serial.println("GW:  " + WiFi.gatewayIP().toString());
-    Serial.println("DNS: " + WiFi.dnsIP().toString());  
-  }
-
-  // SD Card Setup again after Wifi (having SD running and starting wifi breaks the SD card)
-  SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-  if (!SD.begin(SD_CS)) {
-    Serial.println("SD card initialization failed!");
-    beepBuzzer(3,1000,200);
-  } else {
-    Serial.println("SD card initialized.");
-    beepBuzzer(1,100,100);
-  }
- 
-  // OTA Setup
-  ArduinoOTA.setHostname("Discreet"); // Set a unique hostname
-  ArduinoOTA.setPassword("Discreet"); // Optional: Set a password for security
-  ArduinoOTA.begin(); // Start OTA service
-
-  // === Web Routes ===
-  
   server.on("/upload", HTTP_POST, []() {
     // This runs *after* handleUpload finishes
     server.sendHeader("Location", "/upload.html?success=1");
@@ -575,6 +496,96 @@ void setup() {
   server.on("/delete", HTTP_GET, handleDelete);
   server.onNotFound(handleFileRequest);
 
+}
+
+void startSD(){
+  SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+  if (!SD.begin(SD_CS)) {
+    Serial.println("SD card initialization failed!");
+    beepBuzzer(3,1000,200);
+  } else {
+    Serial.println("SD card initialized.");
+    beepBuzzer(1,100,100);
+  }
+}
+
+void loadSDConfig() {
+  startSD();
+
+  // Read config
+  File configFile = SD.open("/config.json");
+  if (configFile) {
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, configFile);
+    configFile.close();
+    
+    ssid = doc["ssid"] | "";
+    password = doc["password"] | "";
+    Kp = doc["Kp"] | Kp;
+    Ki = doc["Ki"] | Ki;
+    Kd = doc["Kd"] | Kd;
+    Serial.println("SSID: " + ssid);
+    Serial.println(Kp);
+    Serial.println(Ki);
+    Serial.println(Kd);
+  
+  }
+  
+  //end SD and SPI
+  SD.end();
+  SPI.end();  // fully kill SPI
+  delay(200);
+}
+
+void startWiFi(){
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  unsigned long t0 = millis();
+  Serial.println("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+   delay(500);
+   Serial.print(".");
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    beepBuzzer(5,1000,200);
+    Serial.println("FAILED connecting to WiFi");
+  } else {
+    beepBuzzer(1,500,100);
+    Serial.println("WiFi Connected!");
+    WiFi.config(WiFi.localIP(), IPAddress(0,0,0,0), WiFi.subnetMask(), IPAddress(0,0,0,0));
+    Serial.println("IP:  " + WiFi.localIP().toString());
+    Serial.println("GW:  " + WiFi.gatewayIP().toString());
+    Serial.println("DNS: " + WiFi.dnsIP().toString());  
+  }
+
+}
+
+void setup() {
+
+  Serial.begin(115200);
+  delay(2000);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  
+  //load config.json
+  loadSDConfig();
+  //start WiFi
+  startWiFi();
+
+  // Start SD card again after Wifi (having SD running and starting wifi breaks the SD card)
+  startSD();
+ 
+  // OTA Setup
+  ArduinoOTA.setHostname("Discreet"); // Set a unique hostname
+  ArduinoOTA.setPassword("Discreet"); // Optional: Set a password for security
+  ArduinoOTA.begin(); // Start OTA service
+
+  // === Web Routes ===
+  setupServerRoutes();
+
   // === Start Server ===
   server.begin();
   Serial.println("HTTP server started.");
@@ -586,16 +597,11 @@ void setup() {
   DimmableLight::begin();
 
   // PID setup
-  //setpoint = 10; //testing
-  setpoint = 102; //Set Temp
+  setpoint = 102; //Set Temp + offset
   myPID.SetSampleTime(250); 
   myPID.SetOutputLimits(0, 255);
   myPID.SetMode(AUTOMATIC);
   
-  //Set inistial pump power
-  pumppower = basePumpPowerForSetpoint(pressuresetpoint);
-  light.setBrightness(pumppower);
-
   if (MDNS.begin("discreet")) {
     Serial.println("mDNS started - access at http://discreet.local");
   }
@@ -631,15 +637,15 @@ void loop() {
 
     // --- PRE-INFUSION ---
     if (preinftime > 0 && actime < preinftime) {
-      if (currentPressure < PrePressureSetpoint - 1) {
+      if (currentPressure < PrePressureSetpoint - 2) {
         pumppower = 255;
         light.setBrightness(pumppower);      
       }
       else if (!pumpPowerSetPreinf) {
          PressureTarget = PrePressureSetpoint;
-         pumppower = basePumpPowerForSetpoint(PressureTarget); // runs once
+         pumppower = basePumpPowerForSetpoint(PressureTarget);
          light.setBrightness(pumppower);
-         pumpPowerSetPreinf = true;  // prevents it running again
+         pumpPowerSetPreinf = true;  // prevents running again
          SetPump();
       }
       else SetPump();
