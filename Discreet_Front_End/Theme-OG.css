@@ -3,6 +3,11 @@
   --gauge-mid: #a07820;     /* Gauge 3-7 BAR (light color) */
   --gauge-high: #f0c040;    /* Gauge 7-10 BAR (medium color)*/
   --gauge-danger: #5e0000;  /* Gauge DANGER (dark color*/
+  --chart-temp:     #00ffff;        /* Temperature line */
+  --chart-pressure: orange;        /* Pressure line */
+  --chart-target:   white;        /* Target temp line (dashed) */
+  --chart-grid:     rgba(0, 255, 255, 0.08);  /* Grid lines */
+  --chart-text:     white;        /* Axis labels and legend text */
 }
 
 body {
