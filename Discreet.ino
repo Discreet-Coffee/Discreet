@@ -637,7 +637,7 @@ void loop() {
 
     // --- PRE-INFUSION ---
     if (preinftime > 0 && actime < preinftime) {
-      if (currentPressure <= PrePressureSetpoint - 2) {
+      if (currentPressure <= PrePressureSetpoint - 1) {
         pumppower = 255;
         light.setBrightness(pumppower); 
         pumpPowerSetPreinf = false;     
