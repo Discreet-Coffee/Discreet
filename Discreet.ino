@@ -479,7 +479,9 @@ void setupServerRoutes() {
     serializeJson(doc, file);
   
     file.close();
-  
+    
+    myPID.SetTunings(doc["Kp"], doc["Ki"], doc["Kd"]);
+    
     Serial.println("Config saved");
   
     server.send(200, "text/plain", "Saved");
