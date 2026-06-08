@@ -22,6 +22,12 @@ function loadConfig() {
 
       document.getElementById("Kd").value =
         data.Kd || 0;
+		
+	  document.getElementById("setpoint").value =
+        data.setpoint || 0;
+
+      document.getElementById("offset").value =
+        data.offset || 0;
 
     })
     .catch(error => {
@@ -49,6 +55,14 @@ function saveConfig() {
 
     Kd: Number(
       document.getElementById("Kd").value
+    ),
+	
+    setpoint: Number(
+      document.getElementById("setpoint").value
+    ),
+
+    offset: Number(
+      document.getElementById("offset").value
     )
 
   };

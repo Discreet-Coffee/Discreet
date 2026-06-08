@@ -20,7 +20,7 @@
 
 <div class="config-container">
 
-    <h3>WiFi Settings</h3>
+    <h2>WiFi Settings</h2>
 
     <label for="ssid">SSID</label><br>
     <input id="ssid" type="text"><br><br>
@@ -29,7 +29,7 @@
     <input id="password" type="text"><br><br>
 
 
-    <h3>PID Settings</h3>
+    <h2>PID Settings</h2>
 
     <label for="Kp">Kp</label><br>
     <input id="Kp" type="number" step="1"><br><br>
@@ -39,6 +39,15 @@
 
     <label for="Kd">Kd</label><br>
     <input id="Kd" type="number" step="1"><br><br>
+	
+	
+	<h2>Brew Settings</h2>
+
+    <label for="setpoint">Default Brew Temp</label><br>
+    <input id="setpoint" type="number" step="1"><br><br>
+
+    <label for="offset">Offset</label><br>
+    <input id="offset" type="number" step="1"><br><br>
 
 
     <button class="btn-wide" onclick="saveConfig()">

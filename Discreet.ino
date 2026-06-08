@@ -399,7 +399,6 @@ int basePumpPowerForSetpoint(double Pumpsetpoint) {
   return 190;
 }
 
-
 void SetPump() {
 
   // Only update after boost every xxx ms
@@ -484,7 +483,11 @@ void setupServerRoutes() {
     Ki = doc["Ki"];
     Kd = doc["Kd"];
     myPID.SetTunings(Kp, Ki, Kd); 
+
     
+    offset = doc["offset"] | offset;
+    setpoint = (doc["setpoint"] | setpoint) + offset;
+
     Serial.println("Config saved");
   
     server.send(200, "text/plain", "Saved");
@@ -529,11 +532,8 @@ void loadSDConfig() {
     Kp = doc["Kp"] | Kp;
     Ki = doc["Ki"] | Ki;
     Kd = doc["Kd"] | Kd;
-    Serial.println("SSID: " + ssid);
-    Serial.println(Kp);
-    Serial.println(Ki);
-    Serial.println(Kd);
-  
+    setpoint = doc["setpoint"] | setpoint;
+    offset = doc["offset"] | offset;
   }
   
   //end SD and SPI

@@ -3,5 +3,7 @@
     "password": "PASSWORD",
 	"Kp": 48,
 	"Ki": 8,
-	"Kd": 50
+	"Kd": 50,
+	"setpoint": 93,
+	"offset": 9
 }
