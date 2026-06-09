@@ -28,6 +28,9 @@ function loadConfig() {
 
       document.getElementById("offset").value =
         data.offset || 0;
+	  
+	  document.getElementById("steamSetpoint").value =
+        data.steamSetpoint || 0;
 
     })
     .catch(error => {
@@ -63,6 +66,10 @@ function saveConfig() {
 
     offset: Number(
       document.getElementById("offset").value
+    ),
+	
+	steamSetpoint: Number(
+      document.getElementById("steamSetpoint").value
     )
 
   };
