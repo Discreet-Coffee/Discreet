@@ -588,7 +588,7 @@ void startWiFi(){
 
 void steam(){
 
-  if (input > steamSetpoint && !steaming){
+  if (input > steamSetpoint - 5 && !steaming){
     beepBuzzer(3,100,100);
     steaming = true;
   }
