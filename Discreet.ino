@@ -73,15 +73,13 @@ int actime = 0;  // Shot time in seconds
 
 //Steam Veriables
 String brewTemp;
-unsigned long lastSteamRampTime = 0;
+bool steaming = false;
 double steamSetpoint;
 
 //Other Variables
 int offset = 9; // Due to probe location. If you ask for 100 you will get 91, tune this variable.
 int preinftime = 8;
 
-bool steaming = false;
-bool steamRamp = false;
 bool acDetected = false;
 bool shotStarted = false;
 bool pumpPowerSetPreinf = false;
@@ -258,14 +256,10 @@ void handleAdjust() {
     setpoint = constrain(setpoint + val, 10 + offset, 96 + offset);
   }
   else if (var == "steam") {
-    steamRamp = true;
-    steaming = true;
-    setpoint = steamSetpoint - 5;
-    lastSteamRampTime = millis();
+    setpoint = steamSetpoint;
   }
     else if (var == "stopsteam") {
     setpoint = setpointBoot;
-    steaming = false;
   }
   else if (var == "pressuresetpoint") {
     pressuresetpoint = constrain(pressuresetpoint + val, 3, 11);
@@ -289,9 +283,6 @@ void handleTemp() {
 
 void handleGetValues() {
   
-  if (!steaming) {brewTemp = String(setpoint - offset);}
-  if (steaming) {brewTemp = "Steam";}
-
   StaticJsonDocument<256> doc;
   doc["setpoint"] = int(setpoint - offset);
   doc["preinftime"] = preinftime;
@@ -557,10 +548,10 @@ void loadSDConfig() {
     Kp = 80;
     Ki = 6;
     Kd = 55;
-    setpoint = 95;
+    setpoint = 93;
     offset = 9;
     setpointBoot = setpoint + offset;
-    steamSetpoint = 135 + offset;
+    steamSetpoint = 150 + offset;
   } 
   
   //end SD and SPI
@@ -591,20 +582,6 @@ void startWiFi(){
     Serial.println("IP:  " + WiFi.localIP().toString());
     Serial.println("GW:  " + WiFi.gatewayIP().toString());
     Serial.println("DNS: " + WiFi.dnsIP().toString());  
-  }
-
-}
-
-void steam() {
-  
-  if (millis() - lastSteamRampTime >= 40000) {
-    lastSteamRampTime = millis();
-
-    if (setpoint < steamSetpoint) {
-      setpoint += 3;
-    } else {
-      steamRamp = false;
-    }
   }
 
 }
@@ -662,7 +639,12 @@ void loop() {
   server.handleClient();
   GetPressure();
   runPID();
-  if (steamRamp){steam();}
+
+  if (input > 140 && !steaming){
+    beepBuzzer(3,100,100);
+    steaming = true;
+  }
+  if (input < 100 && steaming){steaming = false;}
 
   // AC detection
   if (digitalRead(syncPin) == LOW && !acDetected) {
