@@ -493,7 +493,7 @@ void setupServerRoutes() {
 
     offset = doc["offset"] | offset;
     setpoint = (doc["setpoint"] | setpoint) + offset;
-    steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
+    steamSetpoint = (doc["steamSetpoint"] | steamSetpoint) + offset;
 
     Serial.println("Config saved");
   
