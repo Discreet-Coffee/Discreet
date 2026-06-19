@@ -491,9 +491,9 @@ void setupServerRoutes() {
     Kd = doc["Kd"];
     myPID.SetTunings(Kp, Ki, Kd); 
 
-    
     offset = doc["offset"] | offset;
     setpoint = (doc["setpoint"] | setpoint) + offset;
+    steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
 
     Serial.println("Config saved");
   
@@ -586,6 +586,22 @@ void startWiFi(){
 
 }
 
+void steam(){
+
+  if (input > steamSetpoint && !steaming){
+    beepBuzzer(3,100,100);
+    steaming = true;
+  }
+  if (input < 100 && steaming){steaming = false;}
+
+  // AC detection
+  if (digitalRead(syncPin) == LOW && !acDetected) {
+    acDetectedTime = millis();
+    acDetected = true;
+  }
+
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -639,18 +655,7 @@ void loop() {
   server.handleClient();
   GetPressure();
   runPID();
-
-  if (input > 140 && !steaming){
-    beepBuzzer(3,100,100);
-    steaming = true;
-  }
-  if (input < 100 && steaming){steaming = false;}
-
-  // AC detection
-  if (digitalRead(syncPin) == LOW && !acDetected) {
-    acDetectedTime = millis();
-    acDetected = true;
-  }
+  steam();
 
   if (acDetected) {
 
