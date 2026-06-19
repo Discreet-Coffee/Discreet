@@ -254,6 +254,7 @@ void handleAdjust() {
   }
   else if (var == "setpoint") {
     setpoint = constrain(setpoint + val, 10 + offset, 96 + offset);
+    setpointBoot = setpoint;
   }
   else if (var == "steam") {
     setpoint = steamSetpoint;
@@ -541,9 +542,12 @@ void loadSDConfig() {
     Kd = doc["Kd"] | Kd;
     setpoint = doc["setpoint"] | setpoint;
     offset = doc["offset"] | offset;
-    setpointBoot = setpoint + offset;
     steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
+
+    setpoint = setpoint + offset;
+    setpointBoot = setpoint;
     steamSetpoint = steamSetpoint + offset;
+
   } else {
     Kp = 80;
     Ki = 6;
@@ -551,7 +555,7 @@ void loadSDConfig() {
     setpoint = 93;
     offset = 9;
     setpointBoot = setpoint + offset;
-    steamSetpoint = 150 + offset;
+    steamSetpoint = 140 + offset;
   } 
   
   //end SD and SPI
@@ -592,14 +596,8 @@ void steam(){
     beepBuzzer(3,100,100);
     steaming = true;
   }
-  if (input < 100 && steaming){steaming = false;}
-
-  // AC detection
-  if (digitalRead(syncPin) == LOW && !acDetected) {
-    acDetectedTime = millis();
-    acDetected = true;
-  }
-
+  if (input < steamSetpoint - 20 && steaming){steaming = false;}
+  
 }
 
 void setup() {
@@ -636,7 +634,6 @@ void setup() {
   DimmableLight::begin();
 
   // PID setup
-  setpoint = 102; //Set Temp + offset
   myPID.SetSampleTime(250); 
   myPID.SetOutputLimits(0, 255);
   myPID.SetMode(AUTOMATIC);
@@ -656,6 +653,13 @@ void loop() {
   GetPressure();
   runPID();
   steam();
+
+  // AC detection
+  if (digitalRead(syncPin) == LOW && !acDetected) {
+    acDetectedTime = millis();
+    acDetected = true;
+  }
+
 
   if (acDetected) {
 
