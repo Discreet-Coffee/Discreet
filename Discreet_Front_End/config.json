@@ -6,5 +6,6 @@
 	"Kd": 60,
 	"setpoint": 93,
 	"offset": 9,
-	"steamSetpoint": 135
+	"steamSetpoint": 135,
+	"PIDonly": false
 }

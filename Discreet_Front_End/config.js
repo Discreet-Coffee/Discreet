@@ -31,6 +31,9 @@ function loadConfig() {
 	  
 	  document.getElementById("steamSetpoint").value =
         data.steamSetpoint || 0;
+		
+	  document.getElementById("PIDonly").checked =
+        data.PIDonly || false;
 
     })
     .catch(error => {
@@ -70,7 +73,9 @@ function saveConfig() {
 	
 	steamSetpoint: Number(
       document.getElementById("steamSetpoint").value
-    )
+    ),
+	
+	PIDonly: document.getElementById("PIDonly").checked
 
   };
 

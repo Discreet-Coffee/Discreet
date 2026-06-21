@@ -81,6 +81,7 @@ int offset = 9; // Due to probe location. If you ask for 100 you will get 91, tu
 int preinftime = 8;
 
 bool acDetected = false;
+bool PIDonly = false;
 bool shotStarted = false;
 bool pumpPowerSetPreinf = false;
 bool pumpPowerSetExtraction = false;
@@ -495,6 +496,7 @@ void setupServerRoutes() {
     offset = doc["offset"] | offset;
     setpoint = (doc["setpoint"] | setpoint) + offset;
     steamSetpoint = (doc["steamSetpoint"] | steamSetpoint) + offset;
+    PIDonly = doc["PIDonly"] | PIDonly;
 
     Serial.println("Config saved");
   
@@ -543,6 +545,7 @@ void loadSDConfig() {
     setpoint = doc["setpoint"] | setpoint;
     offset = doc["offset"] | offset;
     steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
+    PIDonly = doc["PIDonly"] | PIDonly;
 
     setpoint = setpoint + offset;
     setpointBoot = setpoint;
@@ -643,7 +646,7 @@ void setup() {
   }
   
   delay(2000); //delay before anything starts happening.
-
+  //setpoint = 10; // OVERIDE FOR DEVELOPMENT
 }
 
 void loop() {
@@ -655,7 +658,7 @@ void loop() {
   steam();
 
   // AC detection
-  if (digitalRead(syncPin) == LOW && !acDetected) {
+  if (digitalRead(syncPin) == LOW && !acDetected && !PIDonly) {
     acDetectedTime = millis();
     acDetected = true;
   }
