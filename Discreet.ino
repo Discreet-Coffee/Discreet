@@ -264,7 +264,7 @@ void handleAdjust() {
     setpoint = setpointBoot;
   }
   else if (var == "pressuresetpoint") {
-    pressuresetpoint = constrain(pressuresetpoint + val, 3, 11);
+    pressuresetpoint = constrain(pressuresetpoint + val, 3, 13);
     pumppower = basePumpPowerForSetpoint(pressuresetpoint);
   }
   server.send(200, "text/plain", "OK");
