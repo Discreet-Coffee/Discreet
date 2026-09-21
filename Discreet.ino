@@ -9,6 +9,9 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
+#include "bbw_config.h"
+#include "bbw_scale.h"
+
 
 
 // Wi-Fi Variables
@@ -90,6 +93,43 @@ int bloomtime = 0;
 int offcount = 0;
 
 DimmableLight light(thyristorPin);
+
+// BBW state variables (plain types so they are always available)
+float targetWeight = 36.0f;
+bool bbwEnabled = true;
+bool cutOnScaleLoss = false;
+float bbwLeadTimeS = 0.35f;
+float shotWeight = 0.0f;
+float bbwFlowRate = 0.0f;
+volatile float scaleRawWeight = 0.0f;
+volatile bool scaleStable = false;
+volatile bool scaleConnected = false;
+
+#if DISCREET_ENABLE_BBW
+volatile uint32_t scaleLastPacketMs = 0;
+bool scaleCanNotify = false;
+uint32_t scalePkts = 0;
+uint32_t scaleCbRaw = 0;
+bool scaleChrFound = false;
+bool scaleNotifyEnabled = false;
+bool scaleWasEverConnected = false;
+
+float scaleTareOffset = 0.0f;
+uint32_t scaleTareSettleAt = 0;
+bool scaleArmed = false;
+bool pumpCutByWeight = false;
+bool shotCutByWeight = false;
+
+uint32_t bbwLastFlowMs = 0;
+float bbwLastFlowWeight = 0.0f;
+
+NimBLEAddress scaleFoundAddress((uint8_t*)"\x00\x00\x00\x00\x00\x00");
+bool scaleFound = false;
+static NimBLEClient* scaleClient = nullptr;
+static NimBLERemoteCharacteristic* scaleWeightChr = nullptr;
+static NimBLERemoteCharacteristic* scaleCmdChr = nullptr;
+#endif // DISCREET_ENABLE_BBW
+
 
 //Functions
 void handleApplyTheme() {
@@ -267,6 +307,20 @@ void handleAdjust() {
     pressuresetpoint = constrain(pressuresetpoint + val, 3, 13);
     pumppower = basePumpPowerForSetpoint(pressuresetpoint);
   }
+#if DISCREET_ENABLE_BBW
+  else if (var == "targetweight") {
+    targetWeight = constrain(server.arg("val").toFloat(), 0.0f, 100.0f);
+  }
+  else if (var == "bbw") {
+    bbwEnabled = (server.arg("val") == "1");
+  }
+  else if (var == "bbwlead") {
+    bbwLeadTimeS = constrain(server.arg("val").toFloat(), 0.0f, 3.0f);
+  }
+  else if (var == "tare") {
+    if (scaleConnected) scaleTareNow();
+  }
+#endif // DISCREET_ENABLE_BBW
   server.send(200, "text/plain", "OK");
 }
 
@@ -285,7 +339,7 @@ void handleTemp() {
 
 void handleGetValues() {
   
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<384> doc;
   doc["setpoint"] = int(setpoint - offset);
   doc["preinftime"] = preinftime;
   doc["bloomtime"] = bloomtime;
@@ -299,6 +353,14 @@ void handleGetValues() {
   doc["Kd"] = Kd;
   doc["brewTemp"] = brewTemp;
   doc["steamSetpoint"] = steamSetpoint;
+#if DISCREET_ENABLE_BBW
+  doc["weight"] = round(scaleNetWeight() * 10) / 10.0;
+  doc["targetweight"] = targetWeight;
+  doc["shotweight"] = round(shotWeight * 10) / 10.0;
+  doc["bbw"] = bbwEnabled;
+  doc["scale"] = scaleConnected ? "connected" : "offline";
+  doc["flowrate"] = round(bbwFlowRate * 100) / 100.0;
+#endif // DISCREET_ENABLE_BBW
 
   // Use a buffer to generate the JSON, then send it
   String response;
@@ -425,6 +487,9 @@ void SetPump() {
 
     // Fast - cut pump if overpressure every 50ms
     if (currentPressure > PressureTarget + 0.3) {light.setBrightness(0);}
+#if DISCREET_ENABLE_BBW
+    else if (pumpCutByWeight) {light.setBrightness(0);}
+#endif // DISCREET_ENABLE_BBW
     else {light.setBrightness(pumppower);}
 
   }
@@ -546,6 +611,10 @@ void loadSDConfig() {
     offset = doc["offset"] | offset;
     steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
     PIDonly = doc["PIDonly"] | PIDonly;
+    targetWeight = doc["target_weight"] | targetWeight;
+    bbwEnabled = doc["bbw_enabled"] | bbwEnabled;
+    cutOnScaleLoss = doc["cut_on_scale_loss"] | cutOnScaleLoss;
+    bbwLeadTimeS = doc["bbw_lead_s"] | bbwLeadTimeS;
 
     setpoint = setpoint + offset;
     setpointBoot = setpoint;
@@ -603,6 +672,160 @@ void steam(){
   
 }
 
+#if DISCREET_ENABLE_BBW
+// ------------------------------------------------------------------
+// BLE scale client + brew-by-weight logic
+// ------------------------------------------------------------------
+float scaleNetWeight() {
+  return scaleRawWeight - scaleTareOffset;
+}
+
+class ScaleScanCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+  void onResult(NimBLEAdvertisedDevice* adv) override {
+    String nm = String(adv->getName().c_str());
+    nm.toLowerCase();
+    if (adv->isAdvertisingService(NimBLEUUID(SCALE_SERVICE_UUID)) ||
+        nm.indexOf("my_scale") >= 0 ||
+        nm.indexOf("blackcoffee") >= 0) {
+      scaleFoundAddress = adv->getAddress();
+      scaleFound = true;
+      NimBLEDevice::getScan()->stop();
+    }
+  }
+};
+
+class ScaleClientCallbacks : public NimBLEClientCallbacks {
+  void onDisconnect(NimBLEClient* client) override {
+    scaleConnected = false;
+    Serial.println("Scale disconnected");
+  }
+};
+
+static ScaleScanCallbacks scaleScanCB;
+static ScaleClientCallbacks scaleClientCB;
+
+void scaleNotifyCallback(NimBLERemoteCharacteristic* chr, uint8_t* data,
+                         size_t len, bool isNotify) {
+  scaleCbRaw++;
+  if (chr != scaleWeightChr) return;
+  if (data == nullptr || len < SCALE_PKT_MINLEN) return;
+  if (data[0] != SCALE_HDR0 || data[1] != SCALE_HDR1) return;
+
+  uint8_t signNib = data[2] >> 4;
+  bool isNegative = (signNib == 0x8) || (signNib == 0xC);
+
+  uint32_t mg = ((uint32_t)(data[3] & 0x0F) << 24) |
+                ((uint32_t)data[4] << 16) |
+                ((uint32_t)data[5] << 8)  |
+                ((uint32_t)data[6]);
+
+  scaleRawWeight     = (isNegative ? -1.0f : 1.0f) * ((float)mg / 1000.0f);
+  scaleStable        = ((data[2] & 0x0F) == 0x1);
+  scaleLastPacketMs  = millis();
+  scalePkts++;
+}
+
+void scaleSendTare() {
+  if (!scaleConnected || !scaleCmdChr) return;
+  static uint8_t tareCmd[20] = {
+    0xAC, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xD2, 0xD2
+  };
+  scaleCmdChr->writeValue(tareCmd, sizeof(tareCmd), false);
+}
+
+void scaleTareNow() {
+  scaleSendTare();
+  scaleTareOffset = scaleRawWeight;
+  scaleTareSettleAt = millis() + SCALE_TARE_SETTLE_MS;
+}
+
+void scaleServiceTare() {
+  if (scaleTareSettleAt == 0) return;
+  if ((int32_t)(millis() - scaleTareSettleAt) < 0) return;
+  scaleTareOffset = scaleRawWeight;
+  scaleTareSettleAt = 0;
+  Serial.printf("Tare settled (offset %.1fg)\n", scaleTareOffset);
+}
+
+void scaleTask(void* param) {
+  while (true) {
+    if (!scaleConnected) {
+      scaleFound = false;
+      NimBLEScan* pScan = NimBLEDevice::getScan();
+      pScan->setAdvertisedDeviceCallbacks(&scaleScanCB, false);
+      pScan->setActiveScan(true);
+      pScan->setInterval(97);
+      pScan->setWindow(39);
+      pScan->start(10, false);
+
+      if (scaleFound) {
+        if (scaleClient == nullptr) {
+          scaleClient = NimBLEDevice::createClient();
+          scaleClient->setClientCallbacks(&scaleClientCB, false);
+          scaleClient->setConnectTimeout(8);
+        }
+        if (scaleClient->connect(scaleFoundAddress)) {
+          NimBLERemoteService* svc =
+              scaleClient->getService(NimBLEUUID(SCALE_SERVICE_UUID));
+          if (svc) {
+            scaleWeightChr = svc->getCharacteristic(NimBLEUUID(SCALE_WEIGHT_UUID));
+            scaleCmdChr = svc->getCharacteristic(NimBLEUUID(SCALE_COMMAND_UUID));
+            scaleChrFound = (scaleWeightChr != nullptr);
+
+            if (scaleWeightChr) {
+              scaleWeightChr->getDescriptors(true);
+              NimBLERemoteDescriptor* cccd =
+                  scaleWeightChr->getDescriptor(NimBLEUUID((uint16_t)0x2902));
+              if (cccd) {
+                uint8_t en = 0x01;
+                cccd->writeValue(&en, 1, true);
+                scaleNotifyEnabled = true;
+              } else {
+                scaleNotifyEnabled = scaleWeightChr->subscribe(true, scaleNotifyCallback);
+              }
+              scaleWeightChr->subscribe(true, scaleNotifyCallback);
+              scaleCanNotify = scaleWeightChr->canNotify();
+              Serial.printf("Weight notifications: cccd=%s canNotify=%d\n",
+                            cccd ? "written" : "missing", scaleCanNotify ? 1 : 0);
+            }
+            if (scaleWeightChr) {
+              scaleClient->updateConnParams(12, 24, 0, 400);
+              scaleRawWeight = 0.0f;
+              scaleTareOffset = 0.0f;
+              scaleTareSettleAt = 0;
+              scaleLastPacketMs = millis();
+              scaleConnected = true;
+              Serial.println("Scale connected (MY_SCALE FFB0)");
+              if (!scaleWasEverConnected) {
+                scaleWasEverConnected = true;
+                beepBuzzer(1, 150, 100);
+              }
+            } else {
+              scaleClient->disconnect();
+            }
+          } else {
+            Serial.println("Scale FFB0 service not found");
+            scaleClient->disconnect();
+          }
+        } else {
+          Serial.println("Scale connect failed");
+        }
+      }
+      vTaskDelay(pdMS_TO_TICKS(5000));
+    } else {
+      if (millis() - scaleLastPacketMs > SCALE_SILENCE_MS) {
+        Serial.println("Scale silent - dropping link");
+        scaleConnected = false;
+        if (scaleClient) scaleClient->disconnect();
+      }
+      vTaskDelay(pdMS_TO_TICKS(500));
+    }
+  }
+}
+#endif // DISCREET_ENABLE_BBW
+
 void setup() {
 
   Serial.begin(115200);
@@ -640,6 +863,12 @@ void setup() {
   myPID.SetSampleTime(250); 
   myPID.SetOutputLimits(0, 255);
   myPID.SetMode(AUTOMATIC);
+
+#if DISCREET_ENABLE_BBW
+  NimBLEDevice::init("Discreet");
+  xTaskCreate(scaleTask, "scaleTask", 8192, nullptr, 1, nullptr);
+#endif // DISCREET_ENABLE_BBW
+
   
   if (MDNS.begin("discreet")) {
     Serial.println("mDNS started - access at http://discreet.local");
@@ -650,6 +879,10 @@ void setup() {
 }
 
 void loop() {
+
+#if DISCREET_ENABLE_BBW
+  scaleServiceTare();
+#endif // DISCREET_ENABLE_BBW
 
   ArduinoOTA.handle(); // Handle OTA updates
   server.handleClient();
@@ -670,6 +903,23 @@ void loop() {
     if (!shotStarted) {
       shotStarted = true;
       preinftime = (bloomtime > 0 && preinftime < 5) ? 8 : preinftime;
+#if DISCREET_ENABLE_BBW
+      pumpCutByWeight = false;
+      shotCutByWeight = false;
+      bbwFlowRate = 0.0f;
+      bbwLastFlowMs = 0;
+      if (bbwEnabled) {
+        if (scaleConnected) {
+          scaleTareNow();
+          scaleArmed = true;
+          Serial.printf("BBW armed (tare offset %.1fg, target %.1fg)\n",
+                        scaleTareOffset, targetWeight);
+        } else {
+          beepBuzzer(2, 300, 150);
+          Serial.println("BBW NOT armed - no scale");
+        }
+      }
+#endif // DISCREET_ENABLE_BBW
     }
 
     // Calculate shot time
@@ -716,6 +966,54 @@ void loop() {
       else SetPump();
     }
 
+#if DISCREET_ENABLE_BBW
+    // Brew-by-weight: cut the pump when the cup hits the target weight.
+    if (scaleArmed && !shotCutByWeight && scaleTareSettleAt == 0) {
+      float net = scaleNetWeight();
+      uint32_t nowMs = millis();
+
+      // Estimate flow rate (g/s) over a ~500 ms window.
+      if (bbwLastFlowMs == 0) {
+        bbwLastFlowMs = nowMs;
+        bbwLastFlowWeight = net;
+      } else if (nowMs - bbwLastFlowMs >= 500) {
+        float dt = (nowMs - bbwLastFlowMs) / 1000.0f;
+        if (dt > 0.0f) {
+          float inst = (net - bbwLastFlowWeight) / dt;
+          if (inst < 0.0f) inst = 0.0f;
+          bbwFlowRate = (bbwFlowRate <= 0.0f) ? inst
+                                              : (0.6f * bbwFlowRate + 0.4f * inst);
+        }
+        bbwLastFlowMs = nowMs;
+        bbwLastFlowWeight = net;
+      }
+
+      float lead = bbwFlowRate * bbwLeadTimeS;
+      if (lead > BBW_MAX_LEAD_G) lead = BBW_MAX_LEAD_G;
+      if (lead < 0.0f) lead = 0.0f;
+
+      if (net >= (targetWeight - lead)) {
+        pumpCutByWeight = true;
+        shotCutByWeight = true;
+        shotWeight = net;
+        light.setBrightness(0);
+        beepBuzzer(2, 400, 150);
+        Serial.printf("BBW cut at %.1fg (target %.1f, lead %.2f, flow %.2f g/s)\n",
+                      net, targetWeight, lead, bbwFlowRate);
+      }
+    }
+
+    if (scaleArmed && !scaleConnected) {
+      scaleArmed = false;
+      Serial.println("Scale lost mid-shot - manual mode");
+      beepBuzzer(3, 300, 150);
+      if (cutOnScaleLoss) {
+        pumpCutByWeight = true;
+        light.setBrightness(0);
+      }
+    }
+#endif // DISCREET_ENABLE_BBW
+
     // AC Turned off
     if (digitalRead(syncPin) == HIGH) offcount++;
     else offcount = 0;
@@ -726,6 +1024,11 @@ void loop() {
       pumpPowerSetPreinf = false;
       pumpPowerSetExtraction = false;
       offcount = 0;
+#if DISCREET_ENABLE_BBW
+      scaleArmed = false;
+      shotCutByWeight = false;
+      pumpCutByWeight = false;
+#endif // DISCREET_ENABLE_BBW
     }
   }
 }

@@ -45,7 +45,22 @@ function updateLabels() {
 	  document.getElementById('Kp').innerText = data.Kp  + " Kp";
 	  document.getElementById('Ki').innerText = data.Ki  + " Ki";
 	  document.getElementById('Kd').innerText = data.Kd  + " Kd";
+      if (data.weight !== undefined) document.getElementById('bbw-weight').innerText = data.weight;
+      if (data.targetweight !== undefined) document.getElementById('bbw-target').innerText = data.targetweight;
+      if (data.bbw !== undefined) document.getElementById('bbw-enabled').checked = !!data.bbw;
     });
+}
+
+function setTargetWeight(delta) {
+  fetch('/getValues').then(r => r.json()).then(data => {
+    const cur = parseFloat(data.targetweight || 36);
+    fetch(`/adjust?var=targetweight&val=${cur + delta}`);
+  }).catch(err => console.error("Target weight failed", err));
+}
+
+function setBbwEnabled(on) {
+  fetch(`/adjust?var=bbw&val=${on ? 1 : 0}`)
+    .catch(err => console.error("BBW toggle failed", err));
 }
 
 updateLabels();
