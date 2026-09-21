@@ -56,6 +56,16 @@
 		<button class="btn-wide" onclick="adjust('stopsteam', 0)">Brew</button>
 		<button class="btn-wide" onclick="adjust('steam', 0)">Steam</button>
 		<br>
+		<h2>Brew by Weight</h2>
+		<div class="control-block">
+		<h3>Weight: <span id='bbw-weight'>0</span> g (target <span id='bbw-target'>36</span> g)</h3>
+		<button onclick="setTargetWeight(-0.5)">&nbsp;-&nbsp;</button>
+		<button onclick="setTargetWeight(0.5)">&nbsp;+&nbsp;</button>
+		<button class="btn-wide" onclick="adjust('tare', 0)">Tare</button>
+		<br>
+		<label><input type="checkbox" id="bbw-enabled" checked onchange="setBbwEnabled(this.checked)"> Auto-stop at target</label>
+		</div>
+		<br>
 	    <h2>PID Values</h2>
 		<span id='Kp'></span>&nbsp;-&nbsp;<span id='Ki'></span>&nbsp;-&nbsp;<span id='Kd'></span>
 		<br>
