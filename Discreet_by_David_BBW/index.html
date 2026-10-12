@@ -1,0 +1,149 @@
+<html>
+	<head>
+		<title>Discreet Coffee</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="shortcut icon" sizes="152x152" href="/wall.png">
+		<link rel="stylesheet" href="global.css">
+        <script src="gauge.min.js" defer></script>
+        <script src="chart.js" defer></script>
+        <script src="gauge.js" defer></script>
+        <script src="graph.js" defer></script>
+        <script src="scripts.js" defer></script>
+	</head>
+	<body>
+		<h1>Discreet Coffee</h1>
+		<canvas id="gauge" width="250" height="250"></canvas>
+	
+		<h3><span id='pressure'>0</span> Bar   <span id='pumppower'>0</span> Pump Power</h3>
+		
+		<div class="chart-wrapper">
+			<div class="chart-container">
+				<h3>Temperature Graph</h3>
+				<canvas id="tempChart" width="350" height="150"></canvas>
+			</div>
+		</div>
+
+		<h3>Shot Timer: <span id='actimelabel'>0</span> seconds</h3>
+
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Brew Temp:<span id='setpointlabel'>&deg;C</span></h3>
+		<button onclick="adjust('setpoint', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('setpoint', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		<div class="control-block">
+		<h3>P-Infusion:<span id='preinftimelabel'> S</span></h3>
+		<button onclick="adjust('preinftime', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('preinftime', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		</div>
+		
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Pressure: <span id='pressuresetpoint'> Bar</span></h3>
+		<button onclick="adjust('pressuresetpoint', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('pressuresetpoint', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		<div class="control-block">
+		<h3>Bloom: <span id='bloomtimelabel'> S</span></h3>
+		<button onclick="adjust('bloomtime', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('bloomtime', 1)">&nbsp;+&nbsp;</button>
+
+		</div>
+		</div>
+		
+<!-- Locate the Mode section or footer and place this right above it -->
+<div class="scale-panel">
+    <div class="scale-header">
+        <h2 style="margin:0; font-size: 18px; color: #fff;">Smart Scale Integration</h2>
+        <span id="ble-status-icon" class="ble-disconnected">⚡ BLE DISCONNECTED</span>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-box">
+            <span class="metric-title">Current Weight</span>
+            <div class="metric-value"><span id="scale-weight-val">0.0</span> g</div>
+        </div>
+        <div class="metric-box">
+            <span class="metric-title">Flow Rate</span>
+            <div class="metric-value"><span id="scale-flow-val">0.0</span> g/s</div>
+        </div>
+        <div class="metric-box">
+            <span class="metric-title">Scale Timer</span>
+            <div class="metric-value"><span id="scale-timer-val">00:00</span></div>
+        </div>
+        <div class="metric-box">
+            <span class="metric-title">Scale Battery</span>
+            <div class="metric-value"><span id="scale-batt-val">--</span>%</div>
+        </div>
+    </div>
+
+    <div class="control-container" style="display: flex; gap: 15px; margin-top: 10px;">
+        <div class="control-block" style="flex: 1; background: #222; padding: 10px; border-radius: 4px; text-align: center;">
+            <h3 style="margin:0 0 8px 0; font-size:13px; color:#aaa;">Target Weight: <span id="target-weight-label" style="color:#00ffcc; font-size:14px;">36</span> g</h3>
+            <button onclick="adjust('targetweight', -1)" style="padding: 5px 15px; font-weight: bold; margin-right: 5px;">-</button>
+            <button onclick="adjust('targetweight', 1)" style="padding: 5px 15px; font-weight: bold;">+</button>
+        </div>
+        <div class="control-block" style="flex: 1; background: #222; padding: 10px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center;">
+            <button onclick="adjust('manualtare', 0)" style="background: #ff9900; color: #000; font-weight: bold; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%;">TARE SCALE</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.scale-panel { border: 1px solid #444; padding: 15px; margin: 15px 0; border-radius: 6px; background: #111; font-family: sans-serif; }
+.scale-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.metric-box { background: #1c1c1c; padding: 12px; border-radius: 4px; text-align: center; border: 1px solid #2d2d2d; }
+.metric-title { font-size: 11px; color: #888; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.metric-value { font-size: 20px; font-weight: bold; color: #00ffcc; }
+
+.ble-connected { 
+  color: #00ffcc; 
+  font-size: 13px; 
+  font-weight: bold; 
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+  animation: blePulse 2s infinite ease-in-out;
+}
+
+.ble-disconnected { 
+  color: #ff3333; 
+  font-size: 13px; 
+  font-weight: bold; 
+  text-shadow: 0 0 6px rgba(255, 51, 51, 0.4);
+}
+
+/* Smooth breathing pulse effect for active wireless sync */
+@keyframes blePulse {
+  0% { opacity: 0.7; text-shadow: 0 0 4px rgba(0, 255, 204, 0.4); }
+  50% { opacity: 1.0; text-shadow: 0 0 12px rgba(0, 255, 204, 0.8); }
+  100% { opacity: 0.7; text-shadow: 0 0 4px rgba(0, 255, 204, 0.4); }
+}
+
+.batt-good { color: #00ffcc !important; }
+.batt-low { color: #ff3333 !important; text-shadow: 0 0 8px rgba(255,51,51,0.4); font-weight: bold; }
+</style>
+
+
+		<h2>Mode</h2>
+		<button class="btn-wide" onclick="adjust('stopsteam', 0)">Brew</button>
+		<button class="btn-wide" onclick="adjust('steam', 0)">Steam</button>
+		<br>
+	    <h2>PID Values</h2>
+		<span id='Kp'></span>&nbsp;-&nbsp;<span id='Ki'></span>&nbsp;-&nbsp;<span id='Kd'></span>
+		<br>
+		<br>
+		<h2>Maintenance</h2>
+		<a href="/themes.html"><button class="btn-wide">Themes</button></a>
+		<a href="/config.html"><button class="btn-wide">Config</button></a>
+		<a href="/upload.html"><button class="btn-wide">Files</button></a>
+		
+		<!-- This button is to stop the element from heating when coding -->
+		<!--<button class="btn-wide" onclick="adjust('setpoint', -1000)">10&deg;C</button>-->
+		
+		<br>
+
+		<br>
+	</body>
+</html>
