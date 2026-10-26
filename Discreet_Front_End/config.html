@@ -46,13 +46,17 @@
     <label for="setpoint">Default Brew Temp</label><br>
     <input id="setpoint" type="number" step="1"><br><br>
 
-    <label for="offset">Offset</label><br>
+    <label for="offset">Temp Offset</label><br>
     <input id="offset" type="number" step="1">
 	<h3>Tune this to suite your machine.</h3><br>
 	
 	<label for="steamSetpoint">Steam Temp</label><br>
     <input id="steamSetpoint" type="number" step="1">
 	<h3>Lower this untill if youre hitting theral cut off</h3><br>
+	
+	<label for="weightOffset">Weight Offset (g)</label><br>
+    <input id="weightOffset" type="number" step="1">
+	<h3>Grams of residual flow after the pump stops. Raise it if shots finish over target.</h3><br>
 	
     <label for="PIDonly">PID-Only Mode</label>
     <input id="PIDonly" type="checkbox"><br><br>

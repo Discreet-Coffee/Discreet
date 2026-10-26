@@ -22,17 +22,20 @@ function loadConfig() {
 
       document.getElementById("Kd").value =
         data.Kd || 0;
-		
-	  document.getElementById("setpoint").value =
+
+      document.getElementById("setpoint").value =
         data.setpoint || 0;
 
       document.getElementById("offset").value =
         data.offset || 0;
-	  
-	  document.getElementById("steamSetpoint").value =
+
+      document.getElementById("weightOffset").value =
+        data.weightOffset ?? 4;
+
+      document.getElementById("steamSetpoint").value =
         data.steamSetpoint || 0;
-		
-	  document.getElementById("PIDonly").checked =
+
+      document.getElementById("PIDonly").checked =
         data.PIDonly || false;
 
     })
@@ -62,7 +65,7 @@ function saveConfig() {
     Kd: Number(
       document.getElementById("Kd").value
     ),
-	
+
     setpoint: Number(
       document.getElementById("setpoint").value
     ),
@@ -70,12 +73,16 @@ function saveConfig() {
     offset: Number(
       document.getElementById("offset").value
     ),
-	
-	steamSetpoint: Number(
+
+    weightOffset: Number(
+      document.getElementById("weightOffset").value
+    ),
+
+    steamSetpoint: Number(
       document.getElementById("steamSetpoint").value
     ),
-	
-	PIDonly: document.getElementById("PIDonly").checked
+
+    PIDonly: document.getElementById("PIDonly").checked
 
   };
 

@@ -25,7 +25,7 @@
 		</div>
 
 		<h3>Shot Timer: <span id='actimelabel'>0</span> seconds</h3>
-
+		<h3>Weight: <span id="weight">--</span></h3>
 		<div class="control-row">
 		<div class="control-block">
 		<h3>Brew Temp:<span id='setpointlabel'>&deg;C</span></h3>
@@ -33,17 +33,30 @@
 		<button onclick="adjust('setpoint', 1)">&nbsp;+&nbsp;</button>
 		</div>
 		<div class="control-block">
-		<h3>P-Infusion:<span id='preinftimelabel'> S</span></h3>
-		<button onclick="adjust('preinftime', -1)">&nbsp;-&nbsp;</button>
-		<button onclick="adjust('preinftime', 1)">&nbsp;+&nbsp;</button>
-		</div>
-		</div>
-		
-		<div class="control-row">
-		<div class="control-block">
 		<h3>Pressure: <span id='pressuresetpoint'> Bar</span></h3>
 		<button onclick="adjust('pressuresetpoint', -1)">&nbsp;-&nbsp;</button>
 		<button onclick="adjust('pressuresetpoint', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		</div>
+
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Pre Infusion:<span id='preinftimelabel'> S</span></h3>
+		<button onclick="adjust('preinftime', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('preinftime', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		<div class="control-block">
+		<h3>Pressure: <span id='prepressure'> Bar</span></h3>
+		<button onclick="adjust('prepressure', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('prepressure', 1)">&nbsp;+&nbsp;</button>
+		</div>
+		</div>		
+		
+		<div class="control-row">
+		<div class="control-block">
+		<h3>Brew Weight: <span id='targetweight'> g</span></h3>
+		<button onclick="adjust('targetweight', -1)">&nbsp;-&nbsp;</button>
+		<button onclick="adjust('targetweight', 1)">&nbsp;+&nbsp;</button>
 		</div>
 		<div class="control-block">
 		<h3>Bloom: <span id='bloomtime'> S</span></h3>

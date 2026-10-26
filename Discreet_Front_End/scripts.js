@@ -1,3 +1,10 @@
+// Set an element's text without throwing if the element isn't on the page.
+// (A missing element would otherwise stop the whole poll, including the chart.)
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = text;
+}
+
 setInterval(async () => {
   try {
     const res = await fetch('/getValues');
@@ -9,6 +16,8 @@ setInterval(async () => {
     tempChart.data.datasets[0].data.push(data.temp);
     tempChart.data.datasets[1].data.push(data.pressure);
     tempChart.data.datasets[2].data.push(data.setpoint);
+	    tempChart.data.datasets[3].data.push(data.weight);
+    tempChart.data.datasets[4].data.push(data.targetweight);
     if (tempChart.data.labels.length > 160) {
       tempChart.data.labels.shift();
       tempChart.data.datasets.forEach(ds => ds.data.shift());
@@ -16,9 +25,12 @@ setInterval(async () => {
     tempChart.update();
 
     // Labels
-    document.getElementById('actimelabel').innerText = data.actime;
-    document.getElementById('pressure').innerText = data.pressure;
-    document.getElementById('pumppower').innerText = data.pumppower;
+    setText('actimelabel', data.actime);
+    setText('pressure', data.pressure);
+    setText('pumppower', data.pumppower);
+
+    // Live scale weight ("--" when the scale isn't connected)
+    setText('weight', data.scaleOn ? data.weight.toFixed(1) + " g" : "--");
 
     // Gauge
     gauge.set(parseFloat(data.pressure));
@@ -38,14 +50,20 @@ function updateLabels() {
   fetch('/getValues')
     .then(res => res.json())
     .then(data => {
-      document.getElementById('setpointlabel').innerHTML = data.setpoint + "&deg;C";
-      document.getElementById('preinftimelabel').innerText = (data.preinftime) + " S";
-      document.getElementById('bloomtime').innerText = (data.bloomtime) + " S";
-      document.getElementById('pressuresetpoint').innerText = data.pressuresetpoint + " Bar";
-	  document.getElementById('Kp').innerText = data.Kp  + " Kp";
-	  document.getElementById('Ki').innerText = data.Ki  + " Ki";
-	  document.getElementById('Kd').innerText = data.Kd  + " Kd";
-    });
+      const sp = document.getElementById('setpointlabel');
+      if (sp) sp.innerHTML = data.setpoint + "&deg;C";
+
+      setText('preinftimelabel', data.preinftime + " S");
+      setText('bloomtime', data.bloomtime + " S");
+      setText('pressuresetpoint', data.pressuresetpoint + " Bar");
+	  setText('prepressure', data.prepressure + " Bar");
+      setText('Kp', data.Kp + " Kp");
+      setText('Ki', data.Ki + " Ki");
+      setText('Kd', data.Kd + " Kd");
+      setText('targetweight', data.targetweight + " g");
+      setText('weightoffset', data.weightoffset + " g");
+    })
+    .catch(err => console.error("Label update failed", err));
 }
 
 updateLabels();

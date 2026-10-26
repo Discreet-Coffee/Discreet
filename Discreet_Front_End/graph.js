@@ -18,7 +18,7 @@ tempChart = new Chart(ctx, {
 	datasets: [
 
 	{
-		label: 'Temp (C)',
+		label: 'Temp',
 		data: [],
 		borderColor: cssVar('--chart-temp'),
 		tension: 0.2,
@@ -41,6 +41,28 @@ tempChart = new Chart(ctx, {
 		data: [],
 		borderColor: cssVar('--chart-target'),
 		borderDash: [5, 5],
+		tension: 0.2,
+		pointRadius: 0,
+		pointStyle: 'line'
+	},
+
+	{
+		label: 'Weight',
+		data: [],
+		// Colour comes from --chart-weight in the theme CSS; falls back to orange if not defined
+		borderColor: cssVar('--chart-weight') || 'orange',
+		yAxisID: 'weightAxis',
+		tension: 0.2,
+		pointRadius: 0,
+		pointStyle: 'line'
+	},
+	
+	{
+		label: 'Target',
+		data: [],
+		borderColor: cssVar('--chart-targetweight') || 'orange',
+		borderDash: [5, 5],
+		yAxisID: 'weightAxis',
 		tension: 0.2,
 		pointRadius: 0,
 		pointStyle: 'line'
@@ -103,6 +125,14 @@ tempChart = new Chart(ctx, {
 				text: 'Pressure (Bar)',
 				color: cssVar('--chart-text')
 			}
+		},
+
+		// Hidden axis for the weight line: scales it without drawing a third axis
+		weightAxis: {
+			type: 'linear',
+			display: false,
+			min: 0,
+			max: 50
 		}
 	},
 
@@ -111,7 +141,8 @@ tempChart = new Chart(ctx, {
 			labels: {
 				color: cssVar('--chart-text'),
 				usePointStyle: true,
-				pointStyle: 'line'
+				pointStyle: 'line',
+				filter: item => ![2, 4].includes(item.datasetIndex)
 			}
 		}
 	}
@@ -121,4 +152,3 @@ tempChart = new Chart(ctx, {
 });
 
 });
-

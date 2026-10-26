@@ -32,6 +32,8 @@
   --chart-target:   #55ff55;        /* Target temp line (dashed) */
   --chart-grid:     rgba(0, 255, 0, 0.08);    /* Grid lines */
   --chart-text:     #007700;        /* Axis labels and legend text */
+  --chart-weight: #ff9800;
+  --chart-targetweight: #ff9800;
 }
 
 /* ── Scanline overlay ── */

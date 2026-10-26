@@ -9,7 +9,25 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
+#include <NimBLEDevice.h>
 
+// ===== BLE Scale Variables (KP2048B) =====
+static NimBLEUUID SCALE_SERVICE_UUID("0000FFB0-0000-1000-8000-00805F9B34FB");
+static NimBLEUUID SCALE_DATA_UUID("0000FFB2-0000-1000-8000-00805F9B34FB");
+static NimBLEUUID SCALE_WRITE_UUID("0000FFB1-0000-1000-8000-00805F9B34FB");
+
+NimBLEClient* scaleClient = nullptr;
+NimBLERemoteCharacteristic* scaleWriteChar = nullptr;
+NimBLEAdvertisedDevice* scaleTarget = nullptr;
+
+volatile float scaleWeight = 0;
+volatile bool scaleConnected = false;
+volatile bool tareRequested = false;
+
+// Shot weight cutoff
+double targetWeight = 36;     // g in the cup at the end of the shot
+double weightOffset = 4;      // g of residual flow after the pump stops
+bool weightReached = false;
 
 // Wi-Fi Variables
 String ssid;
@@ -267,6 +285,15 @@ void handleAdjust() {
     pressuresetpoint = constrain(pressuresetpoint + val, 3, 13);
     pumppower = basePumpPowerForSetpoint(pressuresetpoint);
   }
+  else if (var == "targetweight") {
+    targetWeight = constrain(targetWeight + val, 0, 100);
+  }
+  else if (var == "weightoffset") {
+    weightOffset = constrain(weightOffset + val, 0, 20);
+  }
+  else if (var == "prepressure") {
+    PrePressureSetpoint = constrain(PrePressureSetpoint + val, 1, 9);
+  }
   server.send(200, "text/plain", "OK");
 }
 
@@ -285,7 +312,7 @@ void handleTemp() {
 
 void handleGetValues() {
   
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<512> doc;
   doc["setpoint"] = int(setpoint - offset);
   doc["preinftime"] = preinftime;
   doc["bloomtime"] = bloomtime;
@@ -299,6 +326,11 @@ void handleGetValues() {
   doc["Kd"] = Kd;
   doc["brewTemp"] = brewTemp;
   doc["steamSetpoint"] = steamSetpoint;
+  doc["weight"] = scaleWeight;
+  doc["scaleOn"] = scaleConnected;
+  doc["targetweight"] = targetWeight;
+  doc["weightoffset"] = weightOffset;
+  doc["prepressure"] = PrePressureSetpoint;
 
   // Use a buffer to generate the JSON, then send it
   String response;
@@ -347,7 +379,7 @@ void runPID() {
 
   if ((PIDnow - lastPIDTime >= PID_INTERVAL)) { 
     lastPIDTime = PIDnow;
-    
+
     input = thermocouple.readCelsius();
   
     if (isnan(input) || input < 0 || input > 160) {
@@ -358,7 +390,6 @@ void runPID() {
     myPID.Compute();
 
     digitalWrite(SSR_PIN, output >= 127 ? HIGH : LOW);
-
   }
 }
 
@@ -467,7 +498,7 @@ void setupServerRoutes() {
 
   server.on("/saveConfig", HTTP_POST, []() {
   
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
   
     if (deserializeJson(doc, server.arg("plain"))) {
       server.send(400, "text/plain", "Invalid JSON");
@@ -494,6 +525,7 @@ void setupServerRoutes() {
     myPID.SetTunings(Kp, Ki, Kd); 
 
     offset = doc["offset"] | offset;
+    weightOffset = doc["weightOffset"] | weightOffset;
     setpoint = (doc["setpoint"] | setpoint) + offset;
     steamSetpoint = (doc["steamSetpoint"] | steamSetpoint) + offset;
     PIDonly = doc["PIDonly"] | PIDonly;
@@ -533,7 +565,7 @@ void loadSDConfig() {
   // Read config
   File configFile = SD.open("/config.json");
   if (configFile) {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
     deserializeJson(doc, configFile);
     configFile.close();
     
@@ -544,6 +576,7 @@ void loadSDConfig() {
     Kd = doc["Kd"] | Kd;
     setpoint = doc["setpoint"] | setpoint;
     offset = doc["offset"] | offset;
+    weightOffset = doc["weightOffset"] | weightOffset; 
     steamSetpoint = doc["steamSetpoint"] | steamSetpoint;
     PIDonly = doc["PIDonly"] | PIDonly;
 
@@ -603,6 +636,88 @@ void steam(){
   
 }
 
+
+/*
+Bluetooth Scale Intigration Code START
+*/
+// ===== BLE Scale (KP2048B) =====
+
+bool isScaleName(const std::string& name) {
+  return name.rfind("blackcoffee", 0) == 0 ||
+         name.rfind("my_scale", 0) == 0 ||
+         name.rfind("MY_SCALE", 0) == 0;
+}
+
+void scaleNotify(NimBLERemoteCharacteristic* c, uint8_t* d, size_t len, bool isNotify) {
+  if (len < 15) return;
+  bool neg = ((d[2] >> 4) == 0x8 || (d[2] >> 4) == 0xC);
+  int32_t raw = ((uint32_t)(d[3] & 0x0F) << 24) | ((uint32_t)d[4] << 16) | ((uint32_t)d[5] << 8) | d[6];
+  scaleWeight = (neg ? -raw : raw) / 1000.0f;
+}
+
+class ScaleScanCallbacks : public NimBLEScanCallbacks {
+  void onResult(const NimBLEAdvertisedDevice* dev) override {
+    if (scaleTarget || !dev->haveName() || !isScaleName(dev->getName())) return;
+    NimBLEDevice::getScan()->stop();
+    scaleTarget = new NimBLEAdvertisedDevice(*dev);
+  }
+};
+
+bool connectScale(NimBLEAdvertisedDevice* dev) {
+  scaleClient = NimBLEDevice::createClient();
+  if (!scaleClient->connect(dev)) return false;
+  NimBLERemoteService* svc = scaleClient->getService(SCALE_SERVICE_UUID);
+  if (!svc) return false;
+  NimBLERemoteCharacteristic* data = svc->getCharacteristic(SCALE_DATA_UUID);
+  scaleWriteChar = svc->getCharacteristic(SCALE_WRITE_UUID);
+  if (!data || !data->canNotify() || !scaleWriteChar) return false;
+  data->subscribe(true, scaleNotify);
+  return true;
+}
+
+void scaleCleanup() {
+  if (scaleClient) { NimBLEDevice::deleteClient(scaleClient); scaleClient = nullptr; }
+  scaleWriteChar = nullptr;
+  scaleConnected = false;
+  scaleWeight = 0;
+}
+
+void scaleTask(void* param) {
+  for (;;) {
+    if (scaleTarget) {
+      NimBLEAdvertisedDevice* dev = scaleTarget;
+      if (connectScale(dev)) {
+        scaleConnected = true;
+        beepBuzzer(1, 200, 0);
+      } else scaleCleanup();
+      delete dev;
+      scaleTarget = nullptr;
+    }
+    else if (!scaleConnected && !NimBLEDevice::getScan()->isScanning()) {
+      NimBLEDevice::getScan()->start(0, false);
+    }
+
+    if (scaleConnected && (!scaleClient || !scaleClient->isConnected())) {
+      scaleCleanup();
+      beepBuzzer(3, 200, 200);
+    }
+
+    if (tareRequested) {
+      tareRequested = false;
+      if (scaleConnected && scaleWriteChar) {
+        uint8_t cmd[20] = {0xAC, 0x40};
+        cmd[18] = 0xD2; cmd[19] = 0xD2;
+        scaleWriteChar->writeValue(cmd, sizeof(cmd), false);
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+}
+/*
+Bluetooth Scale Intigration Code END
+*/
+
+
 void setup() {
 
   Serial.begin(115200);
@@ -645,8 +760,19 @@ void setup() {
     Serial.println("mDNS started - access at http://discreet.local");
   }
   
+  // BLE scale START
+  NimBLEDevice::init("");
+  NimBLEScan* scan = NimBLEDevice::getScan();
+  scan->setScanCallbacks(new ScaleScanCallbacks());
+  scan->setInterval(45);
+  scan->setWindow(15);
+  scan->setActiveScan(true);
+  xTaskCreate(scaleTask, "scale", 6144, NULL, 1, NULL);
+  // BLE scale END
+
   delay(2000); //delay before anything starts happening.
   //setpoint = 10; // OVERIDE FOR DEVELOPMENT
+
 }
 
 void loop() {
@@ -669,15 +795,19 @@ void loop() {
     // Run once at shot start
     if (!shotStarted) {
       shotStarted = true;
+      tareRequested = true;
       preinftime = (bloomtime > 0 && preinftime < 5) ? 8 : preinftime;
     }
 
-    // Calculate shot time
-    elapsedTime = millis() - acDetectedTime;
-    actime = elapsedTime / 1000;
+    
+    if (!weightReached) { //only run shot lodgic when weight is not reached.
+      
+      // Calculate shot time
+      elapsedTime = millis() - acDetectedTime;
+      actime = elapsedTime / 1000;
 
-    // --- PRE-INFUSION ---
-    if (preinftime > 0 && actime < preinftime) {
+      // --- PRE-INFUSION ---
+      if (preinftime > 0 && actime < preinftime) {
       if (currentPressure <= PrePressureSetpoint - 1) {
         pumppower = 255;
         light.setBrightness(pumppower); 
@@ -691,16 +821,16 @@ void loop() {
          SetPump();
       }
       else SetPump();
-    }
+      }
 
-    // --- BLOOM ---
-    else if (bloomtime > 0 && actime < preinftime + bloomtime) {
+      // --- BLOOM ---
+      else if (bloomtime > 0 && actime < preinftime + bloomtime) {
       pumppower = 0;
       light.setBrightness(pumppower);
-    }
+      }
 
-    // --- EXTRACTION ---
-    else {
+      // --- EXTRACTION ---
+      else {
       if (currentPressure < pressuresetpoint - 2) {
         pumppower = 255;
         light.setBrightness(pumppower);
@@ -714,6 +844,14 @@ void loop() {
          SetPump();
       }
       else SetPump();
+      }
+    
+      if (scaleConnected && elapsedTime > 1500 && scaleWeight >= targetWeight - weightOffset) {
+        weightReached = true;
+        pumppower = 0;
+        light.setBrightness(pumppower);
+      }
+    
     }
 
     // AC Turned off
@@ -726,6 +864,7 @@ void loop() {
       pumpPowerSetPreinf = false;
       pumpPowerSetExtraction = false;
       offcount = 0;
+      weightReached = false;
     }
   }
 }

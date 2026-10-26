@@ -1,10 +1,11 @@
 {
     "ssid": "WIFI_SID",
     "password": "PASSWORD",
-	"Kp": 100,
-	"Ki": 6,
-	"Kd": 60,
+	"Kp": 75,
+	"Ki": 3,
+	"Kd": 40,
 	"setpoint": 93,
+	"weightOffset": 4,
 	"offset": 9,
 	"steamSetpoint": 135,
 	"PIDonly": false
